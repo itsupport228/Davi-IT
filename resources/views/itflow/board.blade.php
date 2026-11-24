@@ -453,6 +453,140 @@
             outline-offset: 2px !important;
         }
     </style>
+
+    {{-- ================================================================
+         POLISH LAYER — efek tipis & animasi ringan
+         Ditaruh setelah tema di atas, jadi hanya menimpa/menambah.
+    ================================================================= --}}
+    <style id="sns-polish">
+        :root {
+            --sns-ease: cubic-bezier(.2, .8, .2, 1);
+            --sns-card-shadow: 0 1px 2px rgba(15, 23, 42, .05), 0 1px 3px rgba(15, 23, 42, .04), inset 0 1px 0 rgba(255, 255, 255, .9);
+            --sns-card-shadow-hover: 0 12px 24px -10px rgba(37, 99, 235, .25), 0 3px 6px -2px rgba(15, 23, 42, .06), inset 0 1px 0 rgba(255, 255, 255, .9);
+        }
+        html.dark {
+            --sns-card-shadow: 0 1px 3px rgba(0, 0, 0, .3), inset 0 1px 0 rgba(255, 255, 255, .04);
+            --sns-card-shadow-hover: 0 12px 24px -8px rgba(0, 0, 0, .55), 0 0 0 1px rgba(59, 130, 246, .25), inset 0 1px 0 rgba(255, 255, 255, .06);
+        }
+
+        /* Atmosfer latar: cahaya biru tipis di pojok */
+        #mainAppContainer,
+        .flex-1.flex.flex-col.min-w-0 {
+            background-image:
+                radial-gradient(820px 340px at 92% -90px, rgba(59, 130, 246, .07), transparent 70%),
+                radial-gradient(640px 320px at 0% 105%, rgba(99, 102, 241, .05), transparent 70%);
+            background-repeat: no-repeat;
+        }
+        html.dark #mainAppContainer,
+        html.dark .flex-1.flex.flex-col.min-w-0 {
+            background-image:
+                radial-gradient(820px 340px at 92% -90px, rgba(59, 130, 246, .11), transparent 70%),
+                radial-gradient(640px 320px at 0% 105%, rgba(99, 102, 241, .08), transparent 70%);
+        }
+
+        /* Header: garis bawah dengan glow biru sangat tipis */
+        header.h-14 {
+            box-shadow: 0 1px 0 var(--sns-header-border), 0 8px 20px -14px rgba(37, 99, 235, .28) !important;
+        }
+
+        /* Sidebar */
+        #navAllBoardsBtn svg:first-child { transition: transform .2s var(--sns-ease); }
+        #navAllBoardsBtn:hover svg:first-child { transform: translateX(2px) scale(1.06); }
+        #sidebarProjectTree [onclick^="selectSidebarScope"]:not([class*="bg-brand-600"]):hover {
+            transform: translateX(2px);
+        }
+        #appSidebar button[onclick="openNewBoardModal()"]:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px -4px rgba(79, 70, 229, .35) !important;
+        }
+        #appSidebar button[onclick="openNewBoardModal()"]:active { transform: translateY(0) scale(.98); }
+
+        /* Kolom: garis aksen status di atas + hover halus */
+        main .grid > div[class*="rounded-2xl"] {
+            position: relative;
+            transition: border-color .2s ease, box-shadow .2s ease !important;
+        }
+        main .grid > div[class*="rounded-2xl"]:hover {
+            border-color: var(--sns-card-border-hover) !important;
+            box-shadow: 0 10px 26px -16px rgba(15, 23, 42, .22) !important;
+        }
+        main .grid > div[class*="rounded-2xl"]::before {
+            content: "";
+            position: absolute;
+            top: -1px; left: 18px; right: 18px;
+            height: 2px;
+            border-radius: 0 0 3px 3px;
+            background: #94a3b8;
+            opacity: .85;
+            pointer-events: none;
+        }
+        div:has(> div > #col-in_progress)::before { background: linear-gradient(90deg, #60a5fa, #3b82f6) !important; }
+        div:has(> div > #col-done)::before        { background: linear-gradient(90deg, #34d399, #10b981) !important; }
+
+        /* Titik status "In Progress" berdenyut pelan */
+        div:has(> div > #col-in_progress) span.w-2\.5 { position: relative; }
+        div:has(> div > #col-in_progress) span.w-2\.5::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: #3b82f6;
+            animation: sns-ping 2.4s ease-out infinite;
+            pointer-events: none;
+        }
+        @keyframes sns-ping {
+            0%        { transform: scale(1);   opacity: .55; }
+            70%, 100% { transform: scale(2.8); opacity: 0; }
+        }
+
+        [id^="count-"] { font-variant-numeric: tabular-nums; transition: background-color .2s ease, color .2s ease; }
+
+        /* Kartu tugas: aksen kiri muncul saat hover + muncul bertahap */
+        .kanban-task-card { position: relative; }
+        .kanban-task-card::before {
+            content: "";
+            position: absolute;
+            left: -1px; top: 12px; bottom: 12px;
+            width: 3px;
+            border-radius: 0 3px 3px 0;
+            background: linear-gradient(180deg, #60a5fa, #2563eb);
+            opacity: 0;
+            transform: scaleY(.3);
+            transition: transform .24s var(--sns-ease), opacity .18s ease;
+            pointer-events: none;
+        }
+        .kanban-task-card:hover::before { opacity: 1; transform: scaleY(1); }
+        .sortable-ghost .kanban-task-card::before,
+        .sortable-drag .kanban-task-card::before { opacity: 0; }
+
+        @keyframes sns-rise { from { opacity: 0; transform: translateY(8px); } }
+        .kanban-task-card.sns-in {
+            animation: sns-rise .38s var(--sns-ease) backwards;
+            animation-delay: calc(var(--i, 0) * 35ms);
+        }
+
+        /* Modal: fade + pop singkat saat dibuka */
+        @keyframes sns-fade { from { opacity: 0; } }
+        @keyframes sns-pop  { from { opacity: 0; transform: translateY(10px) scale(.97); } }
+        [class*="fixed"][class*="inset-0"][class*="bg-black"] { animation: sns-fade .18s ease backwards; }
+        [class*="bg-white"][class*="rounded-2xl"][class*="shadow-2xl"],
+        html.dark [class*="bg-slate-900"][class*="rounded-2xl"][class*="shadow-2xl"] {
+            animation: sns-pop .24s var(--sns-ease) backwards;
+        }
+        dialog.board-modal[open] { animation: sns-pop .22s var(--sns-ease) backwards; }
+        dialog.board-modal[open]::backdrop { animation: sns-fade .2s ease backwards; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .kanban-task-card.sns-in,
+            [class*="fixed"][class*="inset-0"][class*="bg-black"],
+            [class*="bg-white"][class*="rounded-2xl"][class*="shadow-2xl"],
+            html.dark [class*="bg-slate-900"][class*="rounded-2xl"][class*="shadow-2xl"],
+            dialog.board-modal[open],
+            dialog.board-modal[open]::backdrop,
+            div:has(> div > #col-in_progress) span.w-2\.5::after { animation: none !important; }
+            .kanban-task-card, .kanban-task-card::before { transition: none !important; }
+        }
+    </style>
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans antialiased selection:bg-brand-500 selection:text-white">
     {!! $workspace !!}
@@ -541,6 +675,40 @@
             applyBrand();
             setTimeout(applyBrand, 300);
         }
+    })();
+    </script>
+    {{-- Animasi muncul bertahap untuk kartu baru (kartu yang cuma dipindah/drag tidak ikut dianimasikan) --}}
+    <script>
+    (function cardEntrance() {
+        if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        const SEL = '.kanban-task-card';
+
+        function collect(node, out) {
+            if (node.nodeType !== 1) return;
+            if (node.matches(SEL)) out.push(node);
+            node.querySelectorAll && node.querySelectorAll(SEL).forEach(c => out.push(c));
+        }
+
+        function animate(cards) {
+            let i = 0;
+            cards.forEach(card => {
+                if (card.dataset.snsSeen) return;
+                card.dataset.snsSeen = '1';
+                card.style.setProperty('--i', Math.min(i++, 10));
+                card.classList.add('sns-in');
+                card.addEventListener('animationend', () => card.classList.remove('sns-in'), {once: true});
+            });
+        }
+
+        const first = [];
+        collect(document.body, first);
+        animate(first);
+
+        new MutationObserver(mutations => {
+            const added = [];
+            mutations.forEach(m => m.addedNodes.forEach(n => collect(n, added)));
+            if (added.length) animate(added);
+        }).observe(document.body, {childList: true, subtree: true});
     })();
     </script>
 </body>
