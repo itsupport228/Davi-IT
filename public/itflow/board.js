@@ -1,6 +1,58 @@
 const boardApi = '/board/api';
 const boardHeaders = {'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content};
 
+let activeBoardModal = null;
+let modalRestoreFocus = null;
+let modalAction = null;
+let modalCloseTimer = null;
+
+function boardModal({title, name, impact, onConfirm}) {
+    const dialog = document.getElementById('boardConfirmDialog');
+    if (!dialog) throw new Error('Modal konfirmasi tidak tersedia.');
+    if (modalCloseTimer) { clearTimeout(modalCloseTimer); modalCloseTimer = null; }
+    if (dialog.open) dialog.close();
+    dialog.querySelector('#boardConfirmTitle').textContent = title;
+    dialog.querySelector('[data-confirm-name]').textContent = name;
+    dialog.querySelector('[data-confirm-impact]').textContent = impact;
+    const confirm = dialog.querySelector('[data-modal-confirm]');
+    confirm.disabled = false; confirm.classList.remove('is-busy'); confirm.textContent = 'Hapus';
+    modalAction = onConfirm; modalRestoreFocus = document.activeElement; activeBoardModal = dialog;
+    dialog.classList.remove('is-closing'); dialog.showModal();
+    requestAnimationFrame(() => dialog.classList.add('is-open'));
+}
+
+function closeBoardModal() {
+    const dialog = document.getElementById('boardConfirmDialog');
+    if (!dialog?.open) return;
+    dialog.classList.remove('is-open'); dialog.classList.add('is-closing');
+    modalCloseTimer = setTimeout(() => { if (dialog.open) dialog.close(); dialog.classList.remove('is-closing'); activeBoardModal = null; modalAction = null; modalRestoreFocus?.focus?.(); modalCloseTimer = null; }, 160);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const dialog = document.getElementById('boardConfirmDialog');
+    if (!dialog) return;
+    dialog.querySelectorAll('[data-modal-close], [data-modal-cancel]').forEach(button => button.addEventListener('click', closeBoardModal));
+    dialog.addEventListener('cancel', event => { event.preventDefault(); closeBoardModal(); });
+    dialog.addEventListener('click', event => { if (event.target === dialog) closeBoardModal(); });
+    dialog.querySelector('[data-modal-confirm]').addEventListener('click', async event => {
+        const confirm = event.currentTarget;
+        if (confirm.disabled || !modalAction) return;
+        const action = modalAction; confirm.disabled = true; confirm.classList.add('is-busy'); confirm.textContent = 'Memproses...'; modalAction = null;
+        try { await action(); closeBoardModal(); } catch (error) { modalAction = action; confirm.disabled = false; confirm.classList.remove('is-busy'); confirm.textContent = 'Hapus'; showToast(error.message, 'error'); }
+    });
+});
+
+function confirmBoardDelete({type, name, impact, onConfirm}) {
+    return boardModal({title: `Hapus ${type}?`, name, impact, onConfirm});
+}
+
+function setFormBusy(form, busy) { form?.querySelectorAll('button, input, textarea, select').forEach(el => { el.disabled = busy; el.classList.toggle('is-busy', busy); }); }
+function showFieldError(input, message) {
+    input?.parentElement.querySelector('.field-error')?.remove();
+    if (!input || !message) return;
+    const error = document.createElement('div'); error.className = 'field-error'; error.textContent = message; input.parentElement.append(error); input.setAttribute('aria-invalid', 'true');
+}
+
 async function boardRequest(path, method = 'GET', data) {
     const response = await fetch(`${boardApi}${path}`, {method, headers: boardHeaders, body: data ? JSON.stringify(data) : undefined});
     if (response.status === 401) { location.href = '/login'; throw new Error('Sesi berakhir. Silakan masuk lagi.'); }
@@ -37,11 +89,66 @@ openExportModal = function () {
     updateExportPreviewCount();
 };
 
+const originalRenderSidebar = renderSidebarProjectTree;
+renderSidebarProjectTree = function () {
+    originalRenderSidebar();
+    const rows = document.querySelectorAll('#sidebarProjectTree > div');
+    Object.entries(boards).forEach(([prefix, name], index) => {
+        const row = rows[index];
+        if (!row) return;
+        const actions = row.firstElementChild?.querySelector('button[onclick^="toggleBoardDropdown"]')?.parentElement;
+        if (actions) actions.insertBefore(deleteButton(`Hapus project ${prefix} — ${name}`, async () => {
+            await boardRequest(`/projects/${encodeURIComponent((await boardRequest('/meta')).projects.find(p => p.prefix === prefix).id)}`, 'DELETE');
+            delete boards[prefix];
+            subProjects = subProjects.filter(sub => sub.board !== prefix);
+            delete expandedBoards[prefix];
+            if (selectedBoardFilter === prefix) selectSidebarScope('ALL', 'ALL');
+            else renderSidebarProjectTree();
+            showToast(`Project ${name} berhasil dihapus.`, 'success');
+        }), actions.querySelector('button[onclick^="toggleBoardDropdown"]'));
+
+        row.querySelectorAll('button[onclick^="selectSidebarScope"]').forEach(button => {
+            const match = button.getAttribute('onclick')?.match(/'([^']+)'\s*\)$/);
+            const sub = subProjects.find(item => item.board === prefix && item.id === match?.[1]);
+            if (!sub) return;
+            const wrapper = document.createElement('div');
+            wrapper.className = 'sns-subproject-row';
+            button.parentNode.insertBefore(wrapper, button);
+            wrapper.append(button, deleteButton(`Hapus sub-project ${sub.name} dari ${name}`, async () => {
+                await boardRequest(`/sub-projects/${encodeURIComponent(sub.id)}`, 'DELETE');
+                subProjects = subProjects.filter(item => item.id !== sub.id);
+                if (selectedBoardFilter === prefix && selectedSubProjectFilter === sub.id) selectSidebarScope(prefix, 'ALL');
+                else renderSidebarProjectTree();
+                showToast(`Sub-Project ${sub.name} berhasil dihapus.`, 'success');
+            }));
+        });
+    });
+};
+
+function deleteButton(label, remove) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'sns-sidebar-delete';
+    button.title = label;
+    button.setAttribute('aria-label', label);
+    button.innerHTML = '<span aria-hidden="true">×</span>';
+    button.addEventListener('click', async event => {
+        event.stopPropagation();
+        const isProject = label.toLowerCase().includes('project') && !label.toLowerCase().includes('sub-project');
+        const isSubProject = label.toLowerCase().includes('sub-project');
+        confirmBoardDelete({type: isProject ? 'project' : isSubProject ? 'sub-project' : 'item', name: label.replace(/^Hapus\s+/i, '').replace(/\?$/, ''), impact: isProject ? 'Project hanya dapat dihapus jika tidak memiliki task atau sub-project.' : isSubProject ? 'Sub-project hanya dapat dihapus jika tidak memiliki task.' : 'Data task dan seluruh detailnya akan dihapus.', onConfirm: remove});
+    });
+    return button;
+}
+
 handleCreateBoard = async function (event) {
     event.preventDefault();
+    const form = event.currentTarget; setFormBusy(form, true);
     const name = document.getElementById('newBoardName').value.trim();
     const prefix = document.getElementById('newBoardPrefix').value.trim().toUpperCase();
     const sub_projects = document.getElementById('newBoardSubProjectsInput').value.split('\n').map(s => s.trim()).filter(Boolean);
+    if (!name) { showFieldError(document.getElementById('newBoardName'), 'Nama project wajib diisi.'); setFormBusy(form, false); return; }
+    if (!prefix) { showFieldError(document.getElementById('newBoardPrefix'), 'Prefix project wajib diisi.'); setFormBusy(form, false); return; }
     try {
         const project = await boardRequest('/projects', 'POST', {name, prefix, sub_projects});
         boards[project.prefix] = project.name;
@@ -50,13 +157,15 @@ handleCreateBoard = async function (event) {
         closeNewBoardModal();
         selectSidebarScope(project.prefix, 'ALL');
         showToast(`Project ${project.prefix} (${project.name}) berhasil dibuat!`, 'success');
-    } catch (error) { showToast(error.message, 'error'); }
+    } catch (error) { showToast(error.message, 'error'); } finally { setFormBusy(form, false); }
 };
 
 handleCreateSubProject = async function (event) {
     event.preventDefault();
+    const form = event.currentTarget; setFormBusy(form, true);
     const prefix = document.getElementById('newSubProjectBoardSelect').value;
     const name = document.getElementById('newSubProjectName').value.trim();
+    if (!name) { showFieldError(document.getElementById('newSubProjectName'), 'Nama sub-project wajib diisi.'); setFormBusy(form, false); return; }
     try {
         const meta = await boardRequest('/meta');
         const project = meta.projects.find(p => p.prefix === prefix);
@@ -65,19 +174,20 @@ handleCreateSubProject = async function (event) {
         expandedBoards[prefix] = true;
         closeNewBoardModal(); renderSidebarProjectTree(); renderBoard();
         showToast(`Sub-Project "${name}" ditambahkan ke ${prefix}!`, 'success');
-    } catch (error) { showToast(error.message, 'error'); }
+    } catch (error) { showToast(error.message, 'error'); } finally { setFormBusy(form, false); }
 };
 
 handleCreateTask = async function (event) {
     event.preventDefault();
+    const form = event.currentTarget; setFormBusy(form, true);
     const prefix = document.getElementById('createBoardSelect').value;
     const subProjectId = document.getElementById('createSubProjectSelect').value;
-    const sub = subProjects.find(s => s.id === subProjectId && s.board === prefix);
-    if (!sub) { showToast('Pilih sub-project untuk task.', 'error'); return; }
+    const titleInput = document.getElementById('createTitleInput');
+    if (!titleInput.value.trim()) { showFieldError(titleInput, 'Judul task wajib diisi.'); setFormBusy(form, false); return; }
     try {
         const meta = await boardRequest('/meta');
         const created = await boardRequest('/tasks', 'POST', {
-            project_id: meta.projects.find(p => p.prefix === prefix).id, sub_project_id: Number(sub.id),
+            project_id: meta.projects.find(p => p.prefix === prefix).id, sub_project_id: subProjectId ? Number(subProjectId) : null,
             status: document.getElementById('createStatusSelect').value,
             assignee_id: Number(document.getElementById('createAssigneeSelect').value),
             title: document.getElementById('createTitleInput').value.trim(),
@@ -89,13 +199,13 @@ handleCreateTask = async function (event) {
         tasks.unshift(toPrototypeTask(created));
         closeCreateModal(); renderSidebarProjectTree(); renderBoard();
         showToast(`Task ${created.code} berhasil dibuat!`, 'success');
-    } catch (error) { showToast(error.message, 'error'); }
+    } catch (error) { showToast(error.message, 'error'); } finally { setFormBusy(form, false); }
 };
 
 function toPrototypeTask(data) {
     const date = new Date(data.created_at);
     return {id: String(data.id), code: data.code, board: data.project.prefix,
-        subProjectId: String(data.sub_project_id), category: data.category, title: data.title,
+        subProjectId: data.sub_project_id === null ? '' : String(data.sub_project_id), category: data.category, title: data.title,
         description: data.description, status: data.status, priority: data.priority,
         assigneeId: String(data.assignee_id), reporterId: String(data.reporter_id), dueDate: data.due_date || '',
         createdAt: `${String(date.getDate()).padStart(2, '0')} ${['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][date.getMonth()]} ${date.getFullYear()}, ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`,
@@ -130,10 +240,13 @@ updateExportPreviewCount = async function () {
 saveDetailChanges = async function () {
     if (!activeTaskId || !draftTask) return;
     if (!draftTask.title.trim()) { showToast('Judul task tidak boleh kosong.', 'error'); return; }
+    const saveButton = document.querySelector('#detailModal button[onclick="saveDetailChanges()"]');
+    if (saveButton?.disabled) return;
+    if (saveButton) { saveButton.disabled = true; saveButton.classList.add('is-busy'); }
     try {
         const updated = await boardRequest(`/tasks/${activeTaskId}`, 'PATCH', {
             title: draftTask.title, description: draftTask.description || '', status: draftTask.status,
-            sub_project_id: Number(draftTask.subProjectId), category: draftTask.category,
+            sub_project_id: draftTask.subProjectId ? Number(draftTask.subProjectId) : null, category: draftTask.category,
             priority: draftTask.priority, assignee_id: Number(draftTask.assigneeId), due_date: draftTask.dueDate || null,
             subtasks: draftTask.subtasks.map(s => ({id: /^\d+$/.test(s.id) ? Number(s.id) : null, title: s.title, done: s.done})),
             comment: draftTask.comments.filter(c => String(c.id).startsWith('c-')).map(c => c.text).join('\n'),
@@ -141,18 +254,18 @@ saveDetailChanges = async function () {
         tasks[tasks.findIndex(t => t.id === activeTaskId)] = toPrototypeTask(updated);
         closeDetailModal(); renderSidebarProjectTree(); renderBoard();
         showToast(`Perubahan pada ${updated.code} berhasil disimpan!`, 'success');
-    } catch (error) { showToast(error.message, 'error'); }
+    } catch (error) { showToast(error.message, 'error'); } finally { if (saveButton) { saveButton.disabled = false; saveButton.classList.remove('is-busy'); } }
 };
 
 deleteCurrentTask = async function () {
-    if (!activeTaskId || !confirm(`Hapus task ${draftTask.code}?`)) return;
-    try {
+    if (!activeTaskId) return;
+    confirmBoardDelete({type: 'task', name: `${draftTask.code} — ${draftTask.title}`, impact: 'Task, checklist, dan catatan terkait akan dihapus permanen.', onConfirm: async () => {
         await boardRequest(`/tasks/${activeTaskId}`, 'DELETE');
         const code = draftTask.code;
         tasks = tasks.filter(t => t.id !== activeTaskId);
         closeDetailModal(); renderSidebarProjectTree(); renderBoard();
         showToast(`Task ${code} telah dihapus.`, 'info');
-    } catch (error) { showToast(error.message, 'error'); }
+    }});
 };
 
 initSortable = function () {

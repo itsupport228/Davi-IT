@@ -176,6 +176,17 @@ code, time, .prefix, .count, .identity span { font-family: "JetBrains Mono", Con
 .modal-root[hidden] { display: none; }
 .board-modal-backdrop { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 14px; background: #02061799; }
 .board-modal { width: min(100%, 760px); max-height: 92dvh; overflow: auto; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); color: var(--text); box-shadow: 0 24px 60px #02061755; }
+.board-modal-backdrop { opacity: 0; transition: opacity .16s ease; }
+.board-modal-backdrop.is-open { opacity: 1; }
+.board-modal.is-animated { transform: scale(.96); opacity: 0; transition: transform .16s ease, opacity .16s ease; }
+.board-modal-backdrop.is-open .board-modal.is-animated { transform: scale(1); opacity: 1; }
+.board-modal-backdrop.is-closing { opacity: 0; }
+.board-modal-backdrop.is-closing .board-modal.is-animated { transform: scale(.96); opacity: 0; }
+dialog.board-modal { margin: auto; opacity: 0; transform: scale(.96); transition: opacity .16s ease, transform .16s ease; }
+dialog.board-modal[open] { display: block; }
+dialog.board-modal.is-open { opacity: 1; transform: scale(1); }
+dialog.board-modal.is-closing { opacity: 0; transform: scale(.96); }
+dialog.board-modal::backdrop { background: rgba(2, 6, 23, .6); backdrop-filter: blur(4px); }
 .board-modal > header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--line); background: var(--soft); }
 .board-modal h2 { font-size: 15px; } .board-modal h2 small { color: var(--quiet); font-size: 11px; font-weight: 500; }
 .board-modal header button { border: 0; background: transparent; color: var(--quiet); font-size: 24px; cursor: pointer; }
@@ -197,4 +208,45 @@ code, time, .prefix, .count, .identity span { font-family: "JetBrains Mono", Con
 .board-modal footer .dirty { display: none; margin-right: auto; color: var(--amber); font-size: 11px; font-weight: 700; } .board-modal footer .dirty.visible { display: inline; }
 .board-toast { position: fixed; right: 20px; bottom: 20px; z-index: 80; max-width: 360px; padding: 11px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); box-shadow: 0 8px 24px #02061722; font-size: 12px; font-weight: 700; }
 .board-toast.success { border-color: #34d399; } .board-toast.error { border-color: #fb7185; color: var(--red); }
+.board-confirm { width: min(100%, 440px); }
+.board-confirm .confirm-body { padding: 18px; display: grid; gap: 10px; }
+.board-confirm .confirm-impact { padding: 10px 12px; border-radius: 9px; background: var(--red-soft); color: var(--red); font-size: 12px; line-height: 1.5; }
+.board-confirm .confirm-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--line); }
+.board-confirm .confirm-actions button { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; background: var(--surface); color: var(--muted); font-size: 11px; font-weight: 700; }
+.board-confirm .confirm-actions .danger {
+    min-width: 84px;
+    border: 1px solid #be123c;
+    background: linear-gradient(180deg, #e11d48 0%, #be123c 100%);
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(190, 18, 60, .22);
+    transition: background .15s ease, box-shadow .15s ease, transform .1s ease;
+}
+.board-confirm .confirm-actions .danger:hover:not(:disabled) {
+    border-color: #9f1239;
+    background: linear-gradient(180deg, #be123c 0%, #9f1239 100%);
+    box-shadow: 0 6px 14px rgba(190, 18, 60, .3);
+}
+.board-confirm .confirm-actions .danger:active:not(:disabled) {
+    transform: translateY(1px);
+    box-shadow: 0 2px 6px rgba(190, 18, 60, .2);
+}
+.board-confirm .confirm-actions .danger:focus-visible {
+    outline: 3px solid rgba(244, 63, 94, .3) !important;
+    outline-offset: 2px;
+}
+.board-confirm .confirm-actions .danger:disabled {
+    background: #9f1239;
+    border-color: #9f1239;
+    box-shadow: none;
+    cursor: progress;
+}
+html.dark .board-confirm .confirm-actions .danger {
+    border-color: #fb7185;
+    background: linear-gradient(180deg, #e11d48 0%, #be123c 100%);
+}
+.field-error { color: var(--red); font-size: 11px; line-height: 1.35; }
+.is-busy { pointer-events: none; opacity: .7; cursor: progress !important; }
+@media (prefers-reduced-motion: reduce) {
+    .board-modal-backdrop, .board-modal.is-animated, dialog.board-modal { transition: none; }
+}
 @media (max-width: 650px) { .detail-columns, .form-grid, .modal-tabs { grid-template-columns: 1fr; } .board-modal { max-height: 96dvh; } }

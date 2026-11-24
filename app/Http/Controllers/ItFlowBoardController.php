@@ -47,7 +47,7 @@ class ItFlowBoardController extends Controller
         $subtasks = DB::table('subtasks')->whereColumn('subtasks.task_id', 'tasks.id');
 
         $query = $visible->select('tasks.*', 'sub_projects.name as sub_project_name')
-            ->join('sub_projects', 'sub_projects.id', '=', 'tasks.sub_project_id')
+            ->leftJoin('sub_projects', 'sub_projects.id', '=', 'tasks.sub_project_id')
             ->addSelect([
                 'subtasks_total' => (clone $subtasks)->selectRaw('count(*)'),
                 'subtasks_done' => (clone $subtasks)->where('is_done', true)->selectRaw('count(*)'),
@@ -102,7 +102,7 @@ class ItFlowBoardController extends Controller
                 'id' => (string) $task->id,
                 'code' => $task->code,
                 'board' => $projects->get($task->project_id)?->prefix,
-                'subProjectId' => (string) $task->sub_project_id,
+                'subProjectId' => $task->sub_project_id === null ? '' : (string) $task->sub_project_id,
                 'category' => $task->category,
                 'title' => $task->title,
                 'description' => $task->description,

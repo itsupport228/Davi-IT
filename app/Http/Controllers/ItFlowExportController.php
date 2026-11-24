@@ -58,7 +58,7 @@ class ItFlowExportController extends Controller
             $subs = $subtasks->get($task->id, collect());
             $complete = $subs->where('is_done', 1)->count();
             $detail[] = [$index + 1, $task->code, $projects[$task->project_id]->prefix.' - '.$projects[$task->project_id]->name,
-                $subProjects[$task->sub_project_id]->name ?? '-', $task->category === 'maintenance' ? 'Maintenance / Support' : 'Development',
+                $task->sub_project_id === null ? 'Umum / Tanpa Sub-Project' : ($subProjects[$task->sub_project_id]->name ?? '-'), $task->category === 'maintenance' ? 'Maintenance / Support' : 'Development',
                 ucfirst($task->priority), ['todo' => 'To Do', 'in_progress' => 'In Progress', 'done' => 'Done / Resolved'][$task->status],
                 $task->title, $users[$task->assignee_id]->name ?? '-', $users[$task->assignee_id]->nip ?? '-',
                 $subs->count() ? $complete.'/'.$subs->count().' ('.round($complete * 100 / $subs->count()).'%)' : '-',

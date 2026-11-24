@@ -1,0 +1,3008 @@
+<!DOCTYPE html>
+<html lang="id" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ITFlow — Internal IT Kanban & Task Tracker (Dummy Prototype)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SortableJS for smooth drag-and-drop -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+    <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- SheetJS with Cell Styling Support for Professional Excel Layout (.xlsx) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            900: '#1e3a8a',
+                            950: '#172554',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .kanban-scroll::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .kanban-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .kanban-scroll::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.35);
+            border-radius: 9999px;
+        }
+        .kanban-scroll::-webkit-scrollbar-thumb:hover {
+            background: rgba(148, 163, 184, 0.55);
+        }
+        .sortable-ghost {
+            opacity: 0.4;
+            transform: scale(0.98);
+        }
+        .sortable-drag {
+            cursor: grabbing !important;
+            box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.25);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans antialiased selection:bg-brand-500 selection:text-white">
+
+    <!-- ==================== LOGIN SCREEN (NIP & PASSWORD ONLY) ==================== -->
+    <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-100 via-blue-50/40 to-slate-200 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+        <div class="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-2xl overflow-hidden">
+            <div class="p-7 sm:p-8 space-y-6">
+                <!-- Brand Header -->
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-brand-600 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-brand-600/25">
+                            <i data-lucide="terminal" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h1 class="font-bold text-xl tracking-tight text-slate-900 dark:text-white">
+                                IT<span class="text-brand-600 dark:text-brand-400">Flow</span>
+                            </h1>
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Internal IT Workspace</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="toggleDarkMode()" class="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer" title="Ganti Tema">
+                        <i data-lucide="moon" class="w-4 h-4 block dark:hidden"></i>
+                        <i data-lucide="sun" class="w-4 h-4 hidden dark:block text-amber-400"></i>
+                    </button>
+                </div>
+
+                <div class="space-y-1">
+                    <h2 class="text-lg font-bold text-slate-900 dark:text-white">Masuk ke Portal Tim IT</h2>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Gunakan Nomor Induk Pegawai (NIP) dan kata sandi internal Anda.</p>
+                </div>
+
+                <!-- Error Alert -->
+                <div id="loginErrorBox" class="hidden p-3 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800/80 text-rose-700 dark:text-rose-300 text-xs font-medium flex items-center gap-2">
+                    <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i>
+                    <span id="loginErrorText">NIP atau Password tidak sesuai.</span>
+                </div>
+
+                <!-- Login Form -->
+                <form onsubmit="handleLogin(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">NIP (Nomor Induk Pegawai)</label>
+                        <div class="relative">
+                            <i data-lucide="id-card" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                            <input type="text" id="loginNipInput" required placeholder="Contoh: 19980101" class="w-full pl-10 pr-3.5 py-2.5 text-sm font-mono bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500 transition">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">Password</label>
+                        <div class="relative">
+                            <i data-lucide="lock" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                            <input type="password" id="loginPasswordInput" required placeholder="••••••••" class="w-full pl-10 pr-3.5 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500 transition">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full py-2.5 px-4 bg-brand-600 hover:bg-brand-700 active:scale-[0.99] text-white text-sm font-semibold rounded-xl shadow-md shadow-brand-600/25 transition flex items-center justify-center gap-2 cursor-pointer">
+                        <span>Masuk Dashboard</span>
+                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </button>
+                </form>
+
+                <!-- Quick Demo Credentials (No Register Needed) -->
+                <div class="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
+                    <div class="flex items-center justify-between text-[11px] text-slate-400">
+                        <span class="font-semibold uppercase tracking-wider">Akun Demo Struktural (Klik Isi)</span>
+                        <span>Pass: <code class="font-mono text-slate-600 dark:text-slate-300">demo-only-pass</code></span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <button type="button" onclick="quickFillAccount('9000000001', 'demo-only-pass')" class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/60 hover:border-brand-400 dark:hover:border-brand-600 text-left transition cursor-pointer group">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">ATL</span>
+                                <i data-lucide="sparkles" class="w-3 h-3 text-slate-300 group-hover:text-brand-500"></i>
+                            </div>
+                            <div class="text-xs font-bold text-slate-800 dark:text-slate-100 mt-1 truncate">Demo Lead</div>
+                            <div class="text-[10px] font-mono text-slate-400">9000000001</div>
+                        </button>
+
+                        <button type="button" onclick="quickFillAccount('9000000002', 'demo-only-pass')" class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/60 hover:border-brand-400 dark:hover:border-brand-600 text-left transition cursor-pointer group">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300">TL</span>
+                                <i data-lucide="sparkles" class="w-3 h-3 text-slate-300 group-hover:text-brand-500"></i>
+                            </div>
+                            <div class="text-xs font-bold text-slate-800 dark:text-slate-100 mt-1 truncate">Demo Supervisor</div>
+                            <div class="text-[10px] font-mono text-slate-400">9000000002</div>
+                        </button>
+
+                        <button type="button" onclick="quickFillAccount('9000000004', 'demo-only-pass')" class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/60 hover:border-brand-400 dark:hover:border-brand-600 text-left transition cursor-pointer group">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">Staff</span>
+                                <i data-lucide="sparkles" class="w-3 h-3 text-slate-300 group-hover:text-brand-500"></i>
+                            </div>
+                            <div class="text-xs font-bold text-slate-800 dark:text-slate-100 mt-1 truncate">Demo Staff A</div>
+                            <div class="text-[10px] font-mono text-slate-400">9000000004</div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MAIN APP WORKSPACE (LOCKED VIEWPORT, NO OUTER SCROLL) ==================== -->
+    <div id="mainAppContainer" class="hidden h-screen w-screen overflow-hidden flex bg-slate-50 dark:bg-slate-950">
+
+        <!-- ==================== LEFT SIDEBAR (PROJECTS & SUB-PROJECTS) ==================== -->
+        <aside id="appSidebar" class="hidden md:flex w-64 lg:w-72 shrink-0 h-full flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 select-none">
+            <!-- Brand Header (Matches Top Navbar Height, No Bottom Divider Line) -->
+            <div class="h-14 px-5 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-brand-600 to-indigo-600 text-white flex items-center justify-center shadow-sm shadow-brand-600/25">
+                        <i data-lucide="terminal" class="w-4 h-4"></i>
+                    </div>
+                    <div class="leading-tight">
+                        <span class="font-bold text-base tracking-tight text-slate-900 dark:text-white">
+                            IT<span class="text-brand-600 dark:text-brand-400">Flow</span>
+                        </span>
+                        <span class="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">Internal IT</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Primary Action: + Project / Sub-Project at Top of Sidebar -->
+            <div class="px-3.5 pt-2 pb-3 shrink-0">
+                <button onclick="openNewBoardModal()" class="w-full py-2 px-3 rounded-xl text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/70 dark:hover:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800/80 transition flex items-center justify-center gap-2 cursor-pointer shadow-xs">
+                    <i data-lucide="folder-plus" class="w-4 h-4"></i>
+                    <span>+ Project / Sub-Project</span>
+                </button>
+            </div>
+
+            <!-- Navigation Tree: All Boards + Nested Sub-Projects -->
+            <div class="flex-1 overflow-y-auto kanban-scroll px-3 pb-4 space-y-1.5">
+                <button onclick="selectSidebarScope('ALL', 'ALL')" id="navAllBoardsBtn" class="w-full px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-between transition cursor-pointer bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white">
+                    <span class="flex items-center gap-2">
+                        <i data-lucide="layout-grid" class="w-4 h-4 text-brand-500"></i>
+                        <span>Semua Board IT</span>
+                    </span>
+                    <span id="sidebarAllCount" class="px-2 py-0.5 text-[10px] font-mono rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200">0</span>
+                </button>
+
+                <div class="pt-2 pb-1 px-2">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Projects & Sub-Projects</span>
+                </div>
+
+                <div id="sidebarProjectTree" class="space-y-1.5">
+                    <!-- Rendered dynamically by renderSidebarProjectTree() -->
+                </div>
+            </div>
+        </aside>
+
+        <!-- ==================== RIGHT MAIN CONTENT AREA ==================== -->
+        <div class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+
+            <!-- Top Navbar (h-14) -->
+            <header class="h-14 shrink-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 flex items-center justify-between gap-3">
+                <!-- Left: Mobile Sidebar Toggle + Active Breadcrumb Context -->
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <button onclick="toggleMobileSidebar()" class="md:hidden p-2 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer" title="Menu Project">
+                        <i data-lucide="menu" class="w-4 h-4"></i>
+                    </button>
+                    <div class="flex items-center gap-2 text-xs sm:text-sm min-w-0 truncate">
+                        <span id="activeScopeBoardBadge" class="font-mono text-[11px] font-bold px-2 py-0.5 rounded-md bg-brand-100 dark:bg-brand-950 text-brand-700 dark:text-brand-300 shrink-0">ALL</span>
+                        <h2 id="activeScopeTitle" class="font-bold text-slate-800 dark:text-slate-100 truncate">Semua Board IT</h2>
+                        <span id="activeScopeSubSep" class="hidden text-slate-400">/</span>
+                        <span id="activeScopeSubBadge" class="hidden text-xs font-semibold px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 truncate"></span>
+                    </div>
+                </div>
+
+                <!-- Right: Export Excel (Manager) + Role Badge + Theme + User Profile + Logout -->
+                <div class="flex items-center gap-2 sm:gap-2.5 shrink-0">
+                    <!-- Export Excel Recap Button (IT Manager Only) -->
+                    <button id="btnExportExcel" onclick="openExportModal()" class="hidden items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] text-white shadow-sm shadow-emerald-600/25 border border-emerald-500/50 transition cursor-pointer whitespace-nowrap" title="Unduh Laporan Rekap Task & Kinerja Tim IT (.xlsx)">
+                        <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
+                        <span>Rekap Excel</span>
+                    </button>
+
+                    <!-- Active Role Indicator Badge -->
+                    <div id="activeRolePill" class="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold bg-brand-50 dark:bg-brand-950/80 text-brand-700 dark:text-brand-300 border border-brand-200/80 dark:border-brand-700/80">
+                        <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+                        <span id="activeRolePillText">IT Manager</span>
+                    </div>
+
+                    <!-- Dark Mode Toggle -->
+                    <button onclick="toggleDarkMode()" class="p-1.5 rounded-xl text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer" title="Ganti Tema Gelap/Terang">
+                        <i data-lucide="moon" class="w-4 h-4 block dark:hidden"></i>
+                        <i data-lucide="sun" class="w-4 h-4 hidden dark:block text-amber-400"></i>
+                    </button>
+
+                    <!-- Current Logged-in User Profile -->
+                    <div class="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">
+                        <img id="currentUserAvatar" src="" alt="User" class="w-7 h-7 rounded-full ring-2 ring-brand-500/30 object-cover">
+                        <div class="hidden sm:block text-left leading-tight">
+                            <div id="currentUserName" class="text-xs font-bold text-slate-800 dark:text-slate-100">-</div>
+                            <div id="currentUserNip" class="text-[10px] font-mono text-slate-400">NIP: -</div>
+                        </div>
+                    </div>
+
+                    <!-- Logout Button -->
+                    <button onclick="handleLogout()" class="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 border border-transparent hover:border-rose-200 dark:hover:border-rose-800/70 transition flex items-center gap-1.5 cursor-pointer" title="Keluar dari Workspace">
+                        <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+                        <span class="hidden md:inline">Logout</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Compact 2-Row Filter Toolbar (Balanced Center, No Horizontal Scroll) -->
+            <div class="shrink-0 bg-white/80 dark:bg-slate-900/80 border-b border-slate-200/80 dark:border-slate-800 px-4 sm:px-6 py-2.5 flex flex-col gap-2">
+                
+                <!-- Row 1: Search Input (Left) + Time Range & Sort (Center) + Category Filter (Right) -->
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="relative w-full sm:w-56 lg:w-64">
+                        <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2"></i>
+                        <input type="text" id="searchInput" oninput="renderBoard()" placeholder="Cari kode atau judul task..." class="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500 transition">
+                    </div>
+
+                    <!-- Center: Timeframe Filter (1 Hari, 7 Hari, 30 Hari) & Sort Toggle -->
+                    <div class="flex flex-wrap items-center gap-1.5">
+                        <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+                            <span class="px-1.5 text-slate-400 hidden xl:inline-flex" title="Filter Waktu Pembuatan">
+                                <i data-lucide="calendar-days" class="w-3.5 h-3.5"></i>
+                            </span>
+                            <button onclick="setTimeFilter('all')" data-time="all" class="time-filter-btn px-2 py-1 rounded-lg text-xs font-semibold transition bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs whitespace-nowrap cursor-pointer">
+                                Semua
+                            </button>
+                            <button onclick="setTimeFilter('1d')" data-time="1d" class="time-filter-btn px-2 py-1 rounded-lg text-xs font-semibold transition text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-700/60 whitespace-nowrap cursor-pointer">
+                                1 Hari
+                            </button>
+                            <button onclick="setTimeFilter('7d')" data-time="7d" class="time-filter-btn px-2 py-1 rounded-lg text-xs font-semibold transition text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-700/60 whitespace-nowrap cursor-pointer">
+                                7 Hari
+                            </button>
+                            <button onclick="setTimeFilter('30d')" data-time="30d" class="time-filter-btn px-2 py-1 rounded-lg text-xs font-semibold transition text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-700/60 whitespace-nowrap cursor-pointer">
+                                30 Hari
+                            </button>
+                        </div>
+
+                        <button id="btnSortOrder" onclick="toggleSortOrder()" class="px-2.5 py-1.5 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap" title="Ubah urutan tanggal dibuat">
+                            <i id="sortOrderIcon" data-lucide="arrow-down-wide-narrow" class="w-3.5 h-3.5 text-brand-500"></i>
+                            <span id="sortOrderText">Terbaru</span>
+                        </button>
+                    </div>
+
+                    <!-- Right: Category Filter (Semua / Maint / Development) -->
+                    <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+                        <button onclick="setCategoryFilter('all')" data-cat="all" class="cat-filter-btn px-2.5 py-1 rounded-lg text-xs font-semibold transition bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs whitespace-nowrap cursor-pointer">
+                            Semua
+                        </button>
+                        <button onclick="setCategoryFilter('maintenance')" data-cat="maintenance" class="cat-filter-btn px-2.5 py-1 rounded-lg text-xs font-semibold transition text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-700/60 flex items-center gap-1 whitespace-nowrap cursor-pointer">
+                            <i data-lucide="wrench" class="w-3 h-3 text-amber-500"></i> Maint/Support
+                        </button>
+                        <button onclick="setCategoryFilter('development')" data-cat="development" class="cat-filter-btn px-2.5 py-1 rounded-lg text-xs font-semibold transition text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-700/60 flex items-center gap-1 whitespace-nowrap cursor-pointer">
+                            <i data-lucide="code-2" class="w-3 h-3 text-purple-500"></i> Development
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Row 2: Priority/Scale Levels (Left) + Board Progress Summary (Center) + Create Task & PIC Avatars (Right) -->
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <!-- Dynamic Priority / Tier Filter Pills -->
+                    <div id="priorityFilterContainer" class="flex flex-wrap items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+                        <!-- Rendered dynamically -->
+                    </div>
+
+                    <!-- Center: Live Board Progress & Critical Status Pill -->
+                    <div id="boardProgressSummary" class="hidden xl:flex items-center gap-3 px-3 py-1.5 rounded-xl bg-slate-100/90 dark:bg-slate-800/90 border border-slate-200/70 dark:border-slate-700/70 text-xs">
+                        <div class="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+                            <i data-lucide="activity" class="w-3.5 h-3.5 text-brand-500"></i>
+                            <span>Progres:</span>
+                            <strong id="summaryCompletionPct" class="font-mono text-slate-900 dark:text-white">0%</strong>
+                            <span id="summaryDoneRatio" class="text-[11px] font-mono text-slate-400">(0/0)</span>
+                        </div>
+                        <span class="h-3.5 w-px bg-slate-300 dark:bg-slate-700"></span>
+                        <div id="summaryCriticalBadge" class="flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            <span>0 Critical</span>
+                        </div>
+                    </div>
+
+                    <!-- Right: Create Task + Assignee Avatars + My Tasks -->
+                    <div class="flex items-center gap-2.5">
+                        <button onclick="openCreateModal()" class="flex items-center gap-1.5 bg-brand-600 hover:bg-brand-500 active:scale-[0.99] text-white text-xs font-semibold px-3.5 py-1.5 rounded-xl shadow-sm shadow-brand-600/30 border border-brand-500/40 transition cursor-pointer whitespace-nowrap">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                            <span>Create Task</span>
+                        </button>
+
+                        <span class="h-5 w-px bg-slate-200 dark:bg-slate-700 hidden sm:inline-block"></span>
+
+                        <div id="avatarFilterGroup" class="flex items-center -space-x-1.5">
+                            <!-- Rendered by JS -->
+                        </div>
+                        <button id="btnMyTasks" onclick="toggleMyTasks()" class="px-2.5 py-1.5 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
+                            <i data-lucide="user-check" class="w-3.5 h-3.5"></i>
+                            <span>My Tasks</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== KANBAN BOARD (FILLS REMAINING HEIGHT, INTERNAL COLUMN SCROLL ONLY) ==================== -->
+            <main class="flex-1 min-h-0 p-4 sm:p-5 overflow-hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
+
+                    <!-- COLUMN 1: TO DO -->
+                    <div class="bg-slate-100/85 dark:bg-slate-900/75 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex flex-col h-full min-h-0 overflow-hidden">
+                        <div class="px-3.5 py-2.5 shrink-0 flex items-center justify-between border-b border-slate-200/70 dark:border-slate-800/90">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-slate-400 dark:bg-slate-500"></span>
+                                <h2 class="font-bold text-xs tracking-wide uppercase text-slate-700 dark:text-slate-200">To Do</h2>
+                                <span id="count-todo" class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">0</span>
+                            </div>
+                            <button onclick="openCreateModal('todo')" class="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/70 dark:hover:bg-slate-800 transition" title="Tambah task di To Do">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                        <div id="col-todo" data-status="todo" class="kanban-column kanban-scroll p-3 space-y-2.5 overflow-y-auto flex-1 min-h-0">
+                            <!-- Cards injected here -->
+                        </div>
+                    </div>
+
+                    <!-- COLUMN 2: IN PROGRESS -->
+                    <div class="bg-slate-100/85 dark:bg-slate-900/75 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex flex-col h-full min-h-0 overflow-hidden">
+                        <div class="px-3.5 py-2.5 shrink-0 flex items-center justify-between border-b border-slate-200/70 dark:border-slate-800/90">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-brand-500 ring-4 ring-brand-500/15"></span>
+                                <h2 class="font-bold text-xs tracking-wide uppercase text-slate-700 dark:text-slate-200">In Progress</h2>
+                                <span id="count-in_progress" class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-brand-100 dark:bg-brand-950 text-brand-700 dark:text-brand-300">0</span>
+                            </div>
+                            <button onclick="openCreateModal('in_progress')" class="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/70 dark:hover:bg-slate-800 transition" title="Tambah task di In Progress">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                        <div id="col-in_progress" data-status="in_progress" class="kanban-column kanban-scroll p-3 space-y-2.5 overflow-y-auto flex-1 min-h-0">
+                            <!-- Cards injected here -->
+                        </div>
+                    </div>
+
+                    <!-- COLUMN 3: DONE / RESOLVED -->
+                    <div class="bg-slate-100/85 dark:bg-slate-900/75 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex flex-col h-full min-h-0 overflow-hidden">
+                        <div class="px-3.5 py-2.5 shrink-0 flex items-center justify-between border-b border-slate-200/70 dark:border-slate-800/90">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                                <h2 class="font-bold text-xs tracking-wide uppercase text-slate-700 dark:text-slate-200">Done / Resolved</h2>
+                                <span id="count-done" class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">0</span>
+                            </div>
+                            <button onclick="openCreateModal('done')" class="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/70 dark:hover:bg-slate-800 transition" title="Tambah task di Done">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                        <div id="col-done" data-status="done" class="kanban-column kanban-scroll p-3 space-y-2.5 overflow-y-auto flex-1 min-h-0">
+                            <!-- Cards injected here -->
+                        </div>
+                    </div>
+
+                </div>
+            </main>
+
+        </div> <!-- End Right Main Content Area -->
+    </div> <!-- End of #mainAppContainer -->
+
+    <!-- ==================== TOAST NOTIFICATION ==================== -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- ==================== MODAL 1: TASK DETAIL & SUB-TASKS ==================== -->
+    <div id="detailModal" class="fixed inset-0 z-40 hidden items-center justify-center bg-slate-950/60 backdrop-blur-xs p-3 sm:p-5">
+        <div class="bg-white dark:bg-slate-900 w-full max-w-4xl max-h-[92vh] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            
+            <!-- Modal Top Header -->
+            <div class="px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 bg-slate-50/70 dark:bg-slate-900">
+                <div class="flex items-center gap-2.5">
+                    <span id="detailTaskCode" class="font-mono text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-200">INF-101</span>
+                    <span id="detailBoardBadge" class="text-xs font-medium text-slate-500 dark:text-slate-400">Infrastructure & Network</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="btnDeleteTask" onclick="deleteCurrentTask()" class="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition" title="Hapus Task">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="closeDetailModal()" class="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Body (2-Column Responsive Layout) -->
+            <div class="flex-1 overflow-y-auto kanban-scroll grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-slate-200 dark:divide-slate-800">
+                
+                <!-- Left Main Column (7 cols): Title, Description, Sub-tasks, Comments -->
+                <div class="lg:col-span-7 p-5 space-y-6">
+                    <!-- Editable Title -->
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Judul Task</label>
+                        <input type="text" id="detailTitleInput" oninput="updateDraftField('title', this.value)" class="w-full text-lg font-bold text-slate-900 dark:text-white bg-slate-50/70 dark:bg-slate-800/60 focus:bg-white dark:focus:bg-slate-800 px-3 py-2 rounded-xl border border-slate-200/80 dark:border-slate-700 focus:border-brand-500 focus:outline-none transition">
+                    </div>
+
+                    <!-- Description -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+                            <i data-lucide="align-left" class="w-3.5 h-3.5 text-slate-400"></i> Deskripsi & Spesifikasi Teknis
+                        </label>
+                        <textarea id="detailDescInput" rows="3" oninput="updateDraftField('description', this.value)" placeholder="Tambahkan detail IP, server, log error, atau catatan teknis..." class="w-full text-sm text-slate-700 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500 transition"></textarea>
+                    </div>
+
+                    <!-- SUB-TASKS SECTION -->
+                    <div class="bg-slate-50/90 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                                <i data-lucide="check-square" class="w-4 h-4 text-brand-600 dark:text-brand-400"></i>
+                                Sub-Tasks Checklist
+                            </h3>
+                            <span id="detailSubtaskCounter" class="text-xs font-bold text-brand-600 dark:text-brand-400">0/0 Selesai (0%)</span>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                            <div id="detailSubtaskProgressBar" class="h-full bg-brand-600 dark:bg-brand-500 transition-all duration-300 rounded-full" style="width: 0%"></div>
+                        </div>
+
+                        <!-- Subtask Items List -->
+                        <div id="detailSubtaskList" class="space-y-2 pt-1">
+                            <!-- Rendered dynamically -->
+                        </div>
+
+                        <!-- Add New Subtask Form -->
+                        <form onsubmit="handleAddSubtask(event)" class="flex items-center gap-2 pt-1">
+                            <input type="text" id="newSubtaskInput" placeholder="Tambah langkah sub-task baru..." class="flex-1 text-xs sm:text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 focus:outline-none focus:border-brand-500">
+                            <button type="submit" class="px-3 py-2 bg-slate-800 hover:bg-slate-900 dark:bg-brand-600 dark:hover:bg-brand-700 text-white text-xs font-semibold rounded-xl transition shrink-0">
+                                + Tambah
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- TECHNICAL NOTES / COMMENTS -->
+                    <div class="space-y-3">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                            <i data-lucide="message-square" class="w-4 h-4 text-slate-400"></i>
+                            Log Aktivitas & Catatan Teknis
+                        </h3>
+
+                        <!-- Add Comment Box -->
+                        <form onsubmit="handleAddComment(event)" class="flex items-start gap-2.5">
+                            <img id="commentUserAvatar" src="" alt="" class="w-8 h-8 rounded-full shrink-0 mt-0.5">
+                            <div class="flex-1 space-y-2">
+                                <input type="text" id="newCommentInput" placeholder="Tulis update progres atau temuan teknis..." class="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 focus:outline-none focus:border-brand-500">
+                                <div class="flex justify-end">
+                                    <button type="submit" class="px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-lg transition">
+                                        Kirim Catatan
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+
+                        <!-- Comment Feed -->
+                        <div id="detailCommentList" class="space-y-2.5 pt-1">
+                            <!-- Rendered dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Sidebar Column (5 cols): Status, Priority, Assignee, Metadata -->
+                <div class="lg:col-span-5 p-5 bg-slate-50/50 dark:bg-slate-900/50 space-y-5">
+                    
+                    <!-- Status Selector -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Status Kolom</label>
+                        <select id="detailStatusSelect" onchange="updateDraftField('status', this.value)" class="w-full text-sm font-semibold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500/40">
+                            <option value="todo">To Do</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="done">Done / Resolved</option>
+                        </select>
+                    </div>
+
+                    <!-- Sub-Project Selector -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Sub-Project</label>
+                        <select id="detailSubProjectSelect" onchange="updateDraftField('subProjectId', this.value)" class="w-full text-sm font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500/40">
+                            <!-- Populated by JS -->
+                        </select>
+                    </div>
+
+                    <!-- Category Selector (Maintenance/Support vs Development) -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Kategori Task</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" onclick="changeDraftCategory('maintenance')" data-cat-val="maintenance" class="detail-cat-btn py-2 px-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition">
+                                <i data-lucide="wrench" class="w-3.5 h-3.5"></i> Maint / Support
+                            </button>
+                            <button type="button" onclick="changeDraftCategory('development')" data-cat-val="development" class="detail-cat-btn py-2 px-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition">
+                                <i data-lucide="code-2" class="w-3.5 h-3.5"></i> Development
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Priority / Scale Selector (Dynamic based on Category) -->
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label id="detailPriorityLabel" class="block text-xs font-bold uppercase tracking-wider text-slate-400">Prioritas</label>
+                            <span id="prioLockHint" class="hidden text-[10px] text-amber-600 dark:text-amber-400 font-medium">IT Manager Control</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2" id="detailPriorityButtons">
+                            <!-- Rendered dynamically for Low/High/Critical or Basic/Great/Epic -->
+                        </div>
+                    </div>
+
+                    <!-- Assignee Selector -->
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-400">Assignee (PIC IT)</label>
+                            <button id="btnAssignToMe" type="button" onclick="assignToMe()" class="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline">
+                                Assign to me
+                            </button>
+                        </div>
+                        <select id="detailAssigneeSelect" onchange="updateDraftField('assigneeId', this.value)" class="w-full text-sm font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500/40">
+                            <!-- Populated by JS -->
+                        </select>
+                    </div>
+
+                    <!-- Due Date -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Target Selesai (Due Date)</label>
+                        <input type="date" id="detailDueDateInput" onchange="updateDraftField('dueDate', this.value)" class="w-full text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 focus:outline-none focus:border-brand-500">
+                    </div>
+
+                    <!-- Audit Info Box -->
+                    <div class="pt-3 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 space-y-1.5">
+                        <div class="flex justify-between">
+                            <span>Dibuat oleh:</span>
+                            <span id="detailReporterName" class="font-semibold text-slate-700 dark:text-slate-300">-</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Tanggal Dibuat:</span>
+                            <span id="detailCreatedAt" class="font-mono font-semibold text-slate-700 dark:text-slate-300">-</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Modal Sticky Footer: Explicit Save Changes Button -->
+            <div class="px-5 py-3.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-900 flex flex-wrap items-center justify-between gap-3">
+                <span id="unsavedChangesBadge" class="hidden text-xs font-semibold text-amber-600 dark:text-amber-400 items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                    Ada perubahan belum disimpan
+                </span>
+                <div class="flex items-center gap-2.5 ml-auto">
+                    <button type="button" onclick="closeDetailModal()" class="px-4 py-2 text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-800 rounded-xl transition cursor-pointer">
+                        Batal
+                    </button>
+                    <button type="button" onclick="saveDetailChanges()" class="px-5 py-2 text-xs sm:text-sm font-semibold bg-brand-600 hover:bg-brand-700 active:scale-[0.99] text-white rounded-xl shadow-sm shadow-brand-600/25 transition flex items-center gap-2 cursor-pointer">
+                        <i data-lucide="save" class="w-4 h-4"></i>
+                        <span>Simpan Perubahan</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL 2: CREATE NEW TASK ==================== -->
+    <div id="createModal" class="fixed inset-0 z-40 hidden items-center justify-center bg-slate-950/60 backdrop-blur-xs p-3 sm:p-5">
+        <div class="bg-white dark:bg-slate-900 w-full max-w-xl rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
+            <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                <h3 class="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+                    <i data-lucide="plus-circle" class="w-5 h-5 text-brand-600"></i>
+                    Buat Task IT Baru
+                </h3>
+                <button onclick="closeCreateModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form onsubmit="handleCreateTask(event)" class="p-5 space-y-4 max-h-[82vh] overflow-y-auto kanban-scroll">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Board Proyek</label>
+                        <select id="createBoardSelect" onchange="syncCreateSubProjectOptions()" class="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 focus:outline-none focus:border-brand-500">
+                            <option value="INF">INF — Infrastructure & Network</option>
+                            <option value="DEV">DEV — Internal Web & Apps</option>
+                            <option value="OPS">OPS — Daily IT Operations</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Sub-Project</label>
+                        <select id="createSubProjectSelect" class="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 focus:outline-none focus:border-brand-500">
+                            <!-- Populated dynamically by board -->
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Status Awal</label>
+                        <select id="createStatusSelect" class="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 focus:outline-none focus:border-brand-500">
+                            <option value="todo">To Do</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="done">Done / Resolved</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Assign ke (PIC)</label>
+                        <select id="createAssigneeSelect" class="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 focus:outline-none focus:border-brand-500">
+                            <!-- Populated by JS -->
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Judul Pekerjaan <span class="text-rose-500">*</span></label>
+                    <input type="text" id="createTitleInput" required placeholder="Contoh: Setup VPN WireGuard Cabang Mojokerto" class="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 focus:outline-none focus:border-brand-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Deskripsi Teknis</label>
+                    <textarea id="createDescInput" rows="2" placeholder="Detail konfigurasi, IP address, atau requirement..." class="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 focus:outline-none focus:border-brand-500"></textarea>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Kategori Task</label>
+                        <select id="createCategorySelect" onchange="syncCreatePriorityOptions()" class="w-full text-sm font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 focus:outline-none focus:border-brand-500">
+                            <option value="maintenance">Maintenance / Support</option>
+                            <option value="development">Development</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label id="createPriorityLabel" class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Prioritas (Maintenance)</label>
+                        <select id="createPrioritySelect" class="w-full text-sm font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 focus:outline-none focus:border-brand-500">
+                            <option value="low">Low (Rutin / Santai)</option>
+                            <option value="high" selected>High (Penting)</option>
+                            <option value="critical">Critical (Mendesak / Darurat)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Optional Initial Sub-tasks -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Sub-Tasks Awal (Opsional — 1 baris per item)</label>
+                    <textarea id="createSubtasksInput" rows="3" placeholder="Contoh:&#10;Backup konfigurasi router lama&#10;Buat tunnel interface baru&#10;Uji ping & failover" class="w-full text-xs font-mono bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 focus:outline-none focus:border-brand-500"></textarea>
+                </div>
+
+                <div class="pt-2 flex items-center justify-end gap-2.5 border-t border-slate-100 dark:border-slate-800">
+                    <button type="button" onclick="closeCreateModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition">Batal</button>
+                    <button type="submit" class="px-5 py-2 text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white rounded-xl shadow-sm transition">Simpan Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL 3: PROJECT (BOARD) & SUB-PROJECT (IT MANAGER & STAFF) ==================== -->
+    <div id="newBoardModal" class="fixed inset-0 z-40 hidden items-center justify-center bg-slate-950/60 backdrop-blur-xs p-3 sm:p-5">
+        <div class="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
+            <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                <h3 class="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+                    <i data-lucide="folder-plus" class="w-5 h-5 text-indigo-600"></i>
+                    Project (Board) & Sub-Project
+                </h3>
+                <button onclick="closeNewBoardModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Mode Tabs: Buat Project Baru vs Tambah Sub-Project ke Project Eksisting -->
+            <div class="px-5 pt-4">
+                <div class="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200/70 dark:border-slate-700">
+                    <button type="button" id="tabNewProject" onclick="switchBoardModalTab('new_project')" class="py-1.5 px-3 rounded-lg text-xs font-bold bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs transition cursor-pointer">
+                        + Project Baru (Board)
+                    </button>
+                    <button type="button" id="tabAddSubProject" onclick="switchBoardModalTab('add_sub')" class="py-1.5 px-3 rounded-lg text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition cursor-pointer">
+                        + Sub-Project ke Board Ada
+                    </button>
+                </div>
+            </div>
+
+            <!-- Form A: Buat Project Baru Sekaligus Sub-Project -->
+            <form id="formCreateProject" onsubmit="handleCreateBoard(event)" class="p-5 space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Nama Project / Board <span class="text-rose-500">*</span></label>
+                        <input type="text" id="newBoardName" required placeholder="Contoh: Cloud & Server Migration" class="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Prefix Kode <span class="text-rose-500">*</span></label>
+                        <input type="text" id="newBoardPrefix" required maxlength="4" placeholder="CLD" class="w-full text-sm font-mono uppercase bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Daftar Sub-Project Awal (Opsional — 1 baris per sub-project)</label>
+                    <textarea id="newBoardSubProjectsInput" rows="3" placeholder="Contoh:&#10;Setup VPC & Firewall&#10;Migrasi Database Production&#10;Load Testing & Cutover" class="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 focus:outline-none focus:border-indigo-500"></textarea>
+                </div>
+
+                <div class="pt-2 flex justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
+                    <button type="button" onclick="closeNewBoardModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer">Batal</button>
+                    <button type="submit" class="px-4 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl cursor-pointer">Simpan Project & Sub-Project</button>
+                </div>
+            </form>
+
+            <!-- Form B: Tambah Sub-Project ke Board yang Sudah Ada -->
+            <form id="formAddSubProjectToExisting" onsubmit="handleCreateSubProject(event)" class="hidden p-5 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Pilih Induk Project (Board)</label>
+                    <select id="newSubProjectBoardSelect" class="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-500">
+                        <option value="INF">INF — Infrastructure & Network</option>
+                        <option value="DEV">DEV — Internal Web & Apps</option>
+                        <option value="OPS">OPS — Daily IT Operations</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Nama Sub-Project Baru <span class="text-rose-500">*</span></label>
+                    <input type="text" id="newSubProjectName" required placeholder="Contoh: Modul HRIS Absensi / Jaringan Cabang Timur" class="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-500">
+                </div>
+                <div class="pt-2 flex justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
+                    <button type="button" onclick="closeNewBoardModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer">Batal</button>
+                    <button type="submit" class="px-4 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl cursor-pointer">Tambah Sub-Project</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL 4: EXPORT RECAP EXCEL OPTIONS (IT MANAGER ONLY) ==================== -->
+    <div id="exportModal" class="fixed inset-0 z-40 hidden items-center justify-center bg-slate-950/60 backdrop-blur-xs p-3 sm:p-5">
+        <div class="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
+            <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-emerald-50/60 dark:bg-emerald-950/30">
+                <h3 class="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+                    <i data-lucide="file-spreadsheet" class="w-5 h-5 text-emerald-600 dark:text-emerald-400"></i>
+                    Rekap Laporan ke Excel (.xlsx)
+                </h3>
+                <button onclick="closeExportModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="p-5 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Pilih Periode Waktu Rekap</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" onclick="selectExportPeriod('1d')" data-exp-period="1d" class="exp-period-btn p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-left transition cursor-pointer">
+                            <div class="text-xs font-bold text-slate-800 dark:text-slate-100">1 Hari Terakhir</div>
+                            <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Laporan harian (24 jam)</div>
+                        </button>
+                        <button type="button" onclick="selectExportPeriod('7d')" data-exp-period="7d" class="exp-period-btn p-3 rounded-xl border-2 border-emerald-500 bg-emerald-50/80 dark:bg-emerald-950/60 text-left transition cursor-pointer">
+                            <div class="text-xs font-bold text-emerald-800 dark:text-emerald-300">7 Hari Terakhir</div>
+                            <div class="text-[11px] text-emerald-600/90 dark:text-emerald-400/80 mt-0.5">Rekap mingguan tim IT</div>
+                        </button>
+                        <button type="button" onclick="selectExportPeriod('30d')" data-exp-period="30d" class="exp-period-btn p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-left transition cursor-pointer">
+                            <div class="text-xs font-bold text-slate-800 dark:text-slate-100">30 Hari Terakhir</div>
+                            <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Rekap bulanan lengkap</div>
+                        </button>
+                        <button type="button" onclick="selectExportPeriod('all')" data-exp-period="all" class="exp-period-btn p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-left transition cursor-pointer">
+                            <div class="text-xs font-bold text-slate-800 dark:text-slate-100">Semua Periode</div>
+                            <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Seluruh riwayat task</div>
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Cakupan Project / Board</label>
+                    <select id="exportBoardScope" onchange="updateExportPreviewCount()" class="w-full text-xs sm:text-sm font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 focus:outline-none focus:border-emerald-500">
+                        <option value="ALL">Semua Project / Board IT</option>
+                    </select>
+                </div>
+
+                <!-- Live Preview Count Box -->
+                <div class="p-3.5 rounded-xl bg-slate-100/90 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700 flex items-center justify-between">
+                    <div class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                        <i data-lucide="layers" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i>
+                        <span>Jumlah task dalam periode ini:</span>
+                    </div>
+                    <span id="exportMatchedCountBadge" class="font-mono text-xs font-bold px-2.5 py-1 rounded-lg bg-emerald-600 text-white">0 Task</span>
+                </div>
+
+                <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
+                    <button type="button" onclick="closeExportModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition cursor-pointer">
+                        Batal
+                    </button>
+                    <button type="button" onclick="confirmExportExcel()" class="px-4 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-sm shadow-emerald-600/25 transition flex items-center gap-1.5 cursor-pointer">
+                        <i data-lucide="download" class="w-4 h-4"></i>
+                        <span>Download Excel (.xlsx)</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== JAVASCRIPT LOGIC ==================== -->
+    <script>
+        // 1. MASTER DATA: USERS (ATL, TL, STAFF HIERARCHY), BOARDS, SUB-PROJECTS & CATEGORIES
+        const teamMembers = [
+            // Dummy ATL (Area Team Leader)
+            {
+                id: 'u_farhan',
+                nip: '9000000001',
+                password: 'demo-only-pass',
+                name: 'Demo Lead',
+                role: 'atl',
+                title: 'Area Team Leader (ATL)',
+                subordinateIds: [], // ATL can see all members
+                initials: 'FH',
+                color: 'bg-blue-600',
+                avatar: 'https://ui-avatars.com/api/?name=Demo+Lead&background=2563eb&color=fff&bold=true'
+            },
+            // Dummy TL 1 (supervises dummy staff)
+            {
+                id: 'u_juhdi',
+                nip: '9000000002',
+                password: 'demo-only-pass',
+                name: 'Demo Supervisor',
+                role: 'tl',
+                title: 'Team Leader (TL)',
+                subordinateIds: ['u_mosul', 'u_raziq'],
+                initials: 'JR',
+                color: 'bg-amber-600',
+                avatar: 'https://ui-avatars.com/api/?name=Demo+Supervisor&background=d97706&color=fff&bold=true'
+            },
+            // Dummy TL 2 (supervises dummy staff)
+            {
+                id: 'u_zulfian',
+                nip: '9000000003',
+                password: 'demo-only-pass',
+                name: 'Demo Coordinator',
+                role: 'tl',
+                title: 'Team Leader (TL)',
+                subordinateIds: ['u_rangga', 'u_aris', 'u_raziq'],
+                initials: 'ZF',
+                color: 'bg-indigo-600',
+                avatar: 'https://ui-avatars.com/api/?name=Demo+Coordinator&background=4f46e5&color=fff&bold=true'
+            },
+            // Dummy staff under TL 1
+            {
+                id: 'u_mosul',
+                nip: '9000000004',
+                password: 'demo-only-pass',
+                name: 'Demo Staff A',
+                role: 'it_staff',
+                title: 'IT Staff',
+                subordinateIds: [],
+                initials: 'EM',
+                color: 'bg-teal-600',
+                avatar: 'https://ui-avatars.com/api/?name=Demo+Staff+A&background=0d9488&color=fff&bold=true'
+            },
+            // Dummy staff under both TLs
+            {
+                id: 'u_raziq',
+                nip: '9000000005',
+                password: 'demo-only-pass',
+                name: 'Demo Staff B',
+                role: 'it_staff',
+                title: 'IT Staff',
+                subordinateIds: [],
+                initials: 'DR',
+                color: 'bg-emerald-600',
+                avatar: 'https://ui-avatars.com/api/?name=Demo+Staff+B&background=059669&color=fff&bold=true'
+            },
+            // Dummy staff under TL 2
+            {
+                id: 'u_rangga',
+                nip: '9000000006',
+                password: 'demo-only-pass',
+                name: 'Demo Staff C',
+                role: 'it_staff',
+                title: 'IT Staff',
+                subordinateIds: [],
+                initials: 'MR',
+                color: 'bg-purple-600',
+                avatar: 'https://ui-avatars.com/api/?name=Demo+Staff+C&background=9333ea&color=fff&bold=true'
+            },
+            {
+                id: 'u_aris',
+                nip: '9000000007',
+                password: 'demo-only-pass',
+                name: 'Demo Staff D',
+                role: 'it_staff',
+                title: 'IT Staff',
+                subordinateIds: [],
+                initials: 'AA',
+                color: 'bg-cyan-600',
+                avatar: 'https://ui-avatars.com/api/?name=Demo+Staff+D&background=0891b2&color=fff&bold=true'
+            },
+            // Independent IT Staff
+            {
+                id: 'u_davi',
+                nip: '9000000008',
+                password: 'demo-only-pass',
+                name: 'Demo Staff E',
+                role: 'it_staff',
+                title: 'IT Staff',
+                subordinateIds: [],
+                initials: 'AD',
+                color: 'bg-sky-600',
+                avatar: 'https://ui-avatars.com/api/?name=Demo+Staff+E&background=0284c7&color=fff&bold=true'
+            },
+            {
+                id: 'u_dimas',
+                nip: '9000000009',
+                password: 'demo-only-pass',
+                name: 'Demo Staff F',
+                role: 'it_staff',
+                title: 'IT Staff',
+                subordinateIds: [],
+                initials: 'DT',
+                color: 'bg-rose-600',
+                avatar: 'https://ui-avatars.com/api/?name=Demo+Staff+F&background=e11d48&color=fff&bold=true'
+            },
+            {
+                id: 'u_athar',
+                nip: '9000000010',
+                password: 'demo-only-pass',
+                name: 'Demo Staff G',
+                role: 'it_staff',
+                title: 'IT Staff',
+                subordinateIds: [],
+                initials: 'MA',
+                color: 'bg-orange-600',
+                avatar: 'https://ui-avatars.com/api/?name=Demo+Staff+G&background=ea580c&color=fff&bold=true'
+            },
+            {
+                id: 'u_desy',
+                nip: '9000000011',
+                password: 'demo-only-pass',
+                name: 'Demo Staff H',
+                role: 'it_staff',
+                title: 'IT Staff',
+                subordinateIds: [],
+                initials: 'DN',
+                color: 'bg-fuchsia-600',
+                avatar: 'https://ui-avatars.com/api/?name=Demo+Staff+H&background=c026d3&color=fff&bold=true'
+            }
+        ];
+
+        const boards = {
+            INF: 'Infrastructure & Network',
+            DEV: 'Internal Web & Apps',
+            OPS: 'Daily IT Operations'
+        };
+
+        let subProjects = [
+            { id: 'sp-inf-1', board: 'INF', name: 'Core Network & Failover' },
+            { id: 'sp-inf-2', board: 'INF', name: 'CCTV & Physical Security' },
+            { id: 'sp-inf-3', board: 'INF', name: 'Wi-Fi & Access Point' },
+            { id: 'sp-dev-1', board: 'DEV', name: 'Portal Ticketing & SSO' },
+            { id: 'sp-dev-2', board: 'DEV', name: 'REST API & Integrasi ERP' },
+            { id: 'sp-dev-3', board: 'DEV', name: 'Dashboard Monitoring' },
+            { id: 'sp-ops-1', board: 'OPS', name: 'Onboarding & Asset Setup' },
+            { id: 'sp-ops-2', board: 'OPS', name: 'Backup & Patch Rutin' }
+        ];
+
+        const CATEGORY_CONFIG = {
+            maintenance: {
+                key: 'maintenance',
+                shortLabel: 'Maint/Support',
+                fullLabel: 'Maintenance / Support',
+                icon: 'wrench',
+                badgeClass: 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200/80 dark:border-amber-800/80',
+                tiers: [
+                    {
+                        value: 'low',
+                        label: 'Low',
+                        desc: 'Rutin / Santai',
+                        dotClass: 'bg-sky-500',
+                        pillClass: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300/80 dark:border-slate-700'
+                    },
+                    {
+                        value: 'high',
+                        label: 'High',
+                        desc: 'Penting',
+                        dotClass: 'bg-amber-500',
+                        pillClass: 'bg-amber-50 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 border-amber-300/80 dark:border-amber-700/80'
+                    },
+                    {
+                        value: 'critical',
+                        label: 'Critical',
+                        desc: 'Mendesak / Darurat',
+                        dotClass: 'bg-rose-600',
+                        pillClass: 'bg-rose-50 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border-rose-300/80 dark:border-rose-700/80'
+                    }
+                ]
+            },
+            development: {
+                key: 'development',
+                shortLabel: 'Development',
+                fullLabel: 'Development',
+                icon: 'code-2',
+                badgeClass: 'bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-200/80 dark:border-purple-800/80',
+                tiers: [
+                    {
+                        value: 'basic',
+                        label: 'Basic',
+                        desc: 'Minor UI / Tweak',
+                        dotClass: 'bg-slate-500',
+                        pillClass: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300/80 dark:border-slate-700'
+                    },
+                    {
+                        value: 'great',
+                        label: 'Great',
+                        desc: 'Fitur Standar / API',
+                        dotClass: 'bg-emerald-500',
+                        pillClass: 'bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border-emerald-300/80 dark:border-emerald-700/80'
+                    },
+                    {
+                        value: 'epic',
+                        label: 'Epic',
+                        desc: 'Modul Besar / Core',
+                        dotClass: 'bg-purple-600',
+                        pillClass: 'bg-purple-50 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 border-purple-300/80 dark:border-purple-700/80'
+                    }
+                ]
+            }
+        };
+
+        let tasks = [
+            {
+                id: 't1',
+                code: 'INF-101',
+                board: 'INF',
+                subProjectId: 'sp-inf-1',
+                category: 'maintenance',
+                title: 'Konfigurasi Failover Dual-WAN Mikrotik Kantor Pusat',
+                description: 'ISP utama sering mengalami packet loss di jam sibuk. Perlu setup recursive routing agar otomatis pindah ke ISP backup dalam < 5 detik.',
+                status: 'in_progress',
+                priority: 'critical',
+                assigneeId: 'u_mosul',
+                reporterId: 'u_farhan',
+                dueDate: '2026-11-24',
+                createdAt: '21 Nov 2026, 08:15',
+                subtasks: [
+                    { id: 's1', title: 'Backup file .rsc konfigurasi Mikrotik CCR', done: true },
+                    { id: 's2', title: 'Setting distance & check-gateway ping 8.8.8.8', done: true },
+                    { id: 's3', title: 'Simulasi cabut kabel FO ISP 1 & ukur downtime', done: false }
+                ],
+                comments: [
+                    { id: 'c1', userId: 'u_farhan', text: 'Tolong dikerjakan di luar jam operasional atau setelah pukul 17.30 WIB.', time: 'Kemarin, 16:20' },
+                    { id: 'c2', userId: 'u_mosul', text: 'Siap Pak, rule routing sudah disiapkan di staging.', time: 'Hari ini, 08:45' }
+                ]
+            },
+            {
+                id: 't2',
+                code: 'DEV-204',
+                board: 'DEV',
+                subProjectId: 'sp-dev-1',
+                category: 'development',
+                title: 'Integrasi SSO Login & Role Matrix Divisi IT',
+                description: 'Membangun modul autentikasi terpusat menggunakan NIP pegawai serta pembatasan hak akses ATL, TL, dan IT Staff.',
+                status: 'in_progress',
+                priority: 'epic',
+                assigneeId: 'u_raziq',
+                reporterId: 'u_juhdi',
+                dueDate: '2026-11-27',
+                createdAt: '19 Nov 2026, 10:30',
+                subtasks: [
+                    { id: 's4', title: 'Rancang skema tabel users & role permissions', done: true },
+                    { id: 's5', title: 'Implementasi middleware validasi NIP', done: true },
+                    { id: 's6', title: 'Testing session timeout & audit log login', done: false },
+                    { id: 's7', title: 'Deploy ke server staging internal', done: false }
+                ],
+                comments: [
+                    { id: 'c3', userId: 'u_raziq', text: 'API endpoint login sudah lolos unit test.', time: 'Hari ini, 10:05' }
+                ]
+            },
+            {
+                id: 't3',
+                code: 'OPS-089',
+                board: 'OPS',
+                subProjectId: 'sp-ops-1',
+                category: 'maintenance',
+                title: 'Setup 4 Unit Laptop Karyawan Baru Departemen Finance',
+                description: 'Instalasi standar OS Windows 11 Pro, join Active Directory, install Microsoft 365, VPN client, dan antivirus endpoint.',
+                status: 'todo',
+                priority: 'high',
+                assigneeId: 'u_rangga',
+                reporterId: 'u_zulfian',
+                dueDate: '2026-11-25',
+                createdAt: '21 Nov 2026, 09:40',
+                subtasks: [
+                    { id: 's8', title: 'Unboxing & pencatatan serial number', done: true },
+                    { id: 's9', title: 'Install OS & driver standar', done: false },
+                    { id: 's10', title: 'Join domain & konfigurasi email Outlook', done: false },
+                    { id: 's11', title: 'Serah terima berita acara ke user', done: false }
+                ],
+                comments: []
+            },
+            {
+                id: 't4',
+                code: 'INF-102',
+                board: 'INF',
+                subProjectId: 'sp-inf-2',
+                category: 'maintenance',
+                title: 'Perbaikan NVR CCTV Gudang Timur Tidak Merekam',
+                description: 'Harddisk bay 2 terbaca error S.M.A.R.T pada NVR Hikvision Gudang Timur.',
+                status: 'todo',
+                priority: 'high',
+                assigneeId: 'u_juhdi',
+                reporterId: 'u_farhan',
+                dueDate: '2026-11-26',
+                createdAt: '16 Nov 2026, 14:10',
+                subtasks: [
+                    { id: 's12', title: 'Cek kesehatan HDD Surveillance 4TB pengganti', done: false },
+                    { id: 's13', title: 'Ganti HDD & format ulang di NVR', done: false }
+                ],
+                comments: []
+            },
+            {
+                id: 't5',
+                code: 'DEV-205',
+                board: 'DEV',
+                subProjectId: 'sp-dev-2',
+                category: 'development',
+                title: 'Endpoint Webhook Notifikasi Tiket Critical ke Telegram',
+                description: 'Mengirimkan alert otomatis ke grup Telegram tim IT setiap kali ada task baru berstatus Critical.',
+                status: 'todo',
+                priority: 'great',
+                assigneeId: 'u_aris',
+                reporterId: 'u_zulfian',
+                dueDate: '2026-11-29',
+                createdAt: '12 Nov 2026, 11:20',
+                subtasks: [
+                    { id: 's14', title: 'Buat Bot Token via BotFather', done: true },
+                    { id: 's15', title: 'Implementasi queue job pengiriman pesan', done: false }
+                ],
+                comments: []
+            },
+            {
+                id: 't6',
+                code: 'OPS-085',
+                board: 'OPS',
+                subProjectId: 'sp-ops-2',
+                category: 'maintenance',
+                title: 'Audit Rutin & Pembersihan Ruang Server Lantai 3',
+                description: 'Pengecekan suhu AC presisi, kebersihan rak kabel patch panel, dan status baterai UPS.',
+                status: 'done',
+                priority: 'low',
+                assigneeId: 'u_davi',
+                reporterId: 'u_farhan',
+                dueDate: '2026-11-18',
+                createdAt: '05 Nov 2026, 13:00',
+                subtasks: [
+                    { id: 's16', title: 'Cek suhu & kelembapan ruangan (19°C)', done: true },
+                    { id: 's17', title: 'Rapikan kabel UTP rak B', done: true }
+                ],
+                comments: [
+                    { id: 'c4', userId: 'u_davi', text: 'Semua indikator UPS normal (load 42%).', time: '18 Nov 2026, 15:10' }
+                ]
+            },
+            {
+                id: 't7',
+                code: 'DEV-201',
+                board: 'DEV',
+                subProjectId: 'sp-dev-3',
+                category: 'development',
+                title: 'Penyesuaian Warna Badge & Dark Mode Toggle Kanban',
+                description: 'Memperbaiki kontras teks badge prioritas dan menyimpan preferensi tema di localStorage.',
+                status: 'done',
+                priority: 'basic',
+                assigneeId: 'u_desy',
+                reporterId: 'u_farhan',
+                dueDate: '2026-11-20',
+                createdAt: '20 Nov 2026, 16:45',
+                subtasks: [
+                    { id: 's18', title: 'Perbaiki kontras dark mode kartu task', done: true }
+                ],
+                comments: []
+            },
+            {
+                id: 't8',
+                code: 'INF-099',
+                board: 'INF',
+                subProjectId: 'sp-inf-3',
+                category: 'maintenance',
+                title: 'Upgrade Firmware Access Point Unifi Lantai 2',
+                description: 'Update firmware ke versi stabil terbaru untuk mengatasi roaming delay pada perangkat mobile.',
+                status: 'done',
+                priority: 'low',
+                assigneeId: 'u_zulfian',
+                reporterId: 'u_farhan',
+                dueDate: '2026-11-15',
+                createdAt: '02 Nov 2026, 10:15',
+                subtasks: [
+                    { id: 's19', title: 'Rolling upgrade 6 unit AP Lantai 2', done: true }
+                ],
+                comments: []
+            },
+            {
+                id: 't9',
+                code: 'OPS-092',
+                board: 'OPS',
+                subProjectId: 'sp-ops-2',
+                category: 'maintenance',
+                title: 'Pengecekan Rutin Backup NAS & Replika Offsite',
+                description: 'Verifikasi integritas snapshot harian server database dan file sharing.',
+                status: 'in_progress',
+                priority: 'high',
+                assigneeId: 'u_dimas',
+                reporterId: 'u_farhan',
+                dueDate: '2026-11-25',
+                createdAt: '22 Nov 2026, 09:00',
+                subtasks: [
+                    { id: 's20', title: 'Cek log sync HBS3 QNAP NAS', done: true },
+                    { id: 's21', title: 'Test restore 1 file arsip', done: false }
+                ],
+                comments: []
+            },
+            {
+                id: 't10',
+                code: 'DEV-208',
+                board: 'DEV',
+                subProjectId: 'sp-dev-2',
+                category: 'development',
+                title: 'Optimasi Query Laporan Inventaris Gudang',
+                description: 'Menambahkan composite index pada tabel transaksi stok untuk mempercepat load report.',
+                status: 'todo',
+                priority: 'great',
+                assigneeId: 'u_athar',
+                reporterId: 'u_farhan',
+                dueDate: '2026-11-28',
+                createdAt: '22 Nov 2026, 11:10',
+                subtasks: [
+                    { id: 's22', title: 'Analisis slow query log MySQL', done: false }
+                ],
+                comments: []
+            }
+        ];
+
+        // 2. APPLICATION STATE & VISIBILITY ACCESS CONTROL
+        let currentUserId = null;
+        let currentRole = 'it_staff';
+        let selectedBoardFilter = 'ALL';
+        let selectedSubProjectFilter = 'ALL';
+        let expandedBoards = { INF: true, DEV: true, OPS: true };
+        let selectedCategoryFilter = 'all';
+        let selectedPriorityFilter = 'all';
+        let selectedTimeFilter = 'all';
+        let sortOrder = 'desc'; // 'desc' = Terbaru, 'asc' = Terlama
+        let selectedAssigneeFilter = null;
+        let onlyMyTasks = false;
+
+        let activeTaskId = null;
+        let draftTask = null;
+        let hasUnsavedChanges = false;
+        let sortableInstances = [];
+
+        // Role-based PIC visibility helper:
+        // - ATL: Sees ALL team members
+        // - TL: Sees ONLY themselves + their assigned subordinate Staff
+        // - Staff: Sees ONLY themselves
+        function getAllowedMemberIds() {
+            const user = teamMembers.find(u => u.id === currentUserId);
+            if (!user) return [];
+            if (user.role === 'atl') {
+                return teamMembers.map(m => m.id);
+            }
+            if (user.role === 'tl') {
+                return [user.id, ...(user.subordinateIds || [])];
+            }
+            return [user.id];
+        }
+
+        function getAllowedMembers() {
+            const allowedIds = new Set(getAllowedMemberIds());
+            return teamMembers.filter(m => allowedIds.has(m.id));
+        }
+
+        function getVisibleTasks() {
+            const allowedIds = new Set(getAllowedMemberIds());
+            return tasks.filter(t => allowedIds.has(t.assigneeId));
+        }
+
+        // 3. UTILITY FUNCTIONS
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function getFormattedNow() {
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+            const now = new Date();
+            const d = String(now.getDate()).padStart(2, '0');
+            const m = months[now.getMonth()];
+            const y = now.getFullYear();
+            const hh = String(now.getHours()).padStart(2, '0');
+            const mm = String(now.getMinutes()).padStart(2, '0');
+            return `${d} ${m} ${y}, ${hh}:${mm}`;
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+            const toast = document.createElement('div');
+            const styles = {
+                success: 'bg-emerald-600 text-white border-emerald-500',
+                error: 'bg-rose-600 text-white border-rose-500',
+                warning: 'bg-amber-600 text-white border-amber-500',
+                info: 'bg-slate-900 dark:bg-slate-800 text-white border-slate-700'
+            };
+            const icons = {
+                success: 'check-circle-2',
+                error: 'alert-octagon',
+                warning: 'alert-triangle',
+                info: 'info'
+            };
+            toast.className = `pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-xl border text-xs font-semibold transition-all duration-200 ${styles[type] || styles.info}`;
+            toast.innerHTML = `<i data-lucide="${icons[type] || icons.info}" class="w-4 h-4 shrink-0"></i><span>${escapeHtml(message)}</span>`;
+            container.appendChild(toast);
+            lucide.createIcons();
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(8px)';
+                setTimeout(() => toast.remove(), 220);
+            }, 3200);
+        }
+
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+        }
+
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('appSidebar');
+            if (!sidebar) return;
+            sidebar.classList.toggle('hidden');
+            sidebar.classList.toggle('fixed');
+            sidebar.classList.toggle('inset-y-0');
+            sidebar.classList.toggle('left-0');
+            sidebar.classList.toggle('z-40');
+            sidebar.classList.toggle('shadow-2xl');
+        }
+
+        // 4. AUTHENTICATION (NIP & PASSWORD)
+        function quickFillAccount(nip, pass) {
+            const nipEl = document.getElementById('loginNipInput');
+            const passEl = document.getElementById('loginPasswordInput');
+            if (nipEl) nipEl.value = nip;
+            if (passEl) passEl.value = pass;
+            document.getElementById('loginErrorBox')?.classList.add('hidden');
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const nipVal = document.getElementById('loginNipInput').value.trim();
+            const passVal = document.getElementById('loginPasswordInput').value;
+            const errBox = document.getElementById('loginErrorBox');
+            const errText = document.getElementById('loginErrorText');
+
+            const foundUser = teamMembers.find(u => u.nip === nipVal && u.password === passVal);
+            if (!foundUser) {
+                errText.textContent = 'NIP atau Password salah. Silakan periksa kembali.';
+                errBox.classList.remove('hidden');
+                return;
+            }
+
+            errBox.classList.add('hidden');
+            currentUserId = foundUser.id;
+            currentRole = foundUser.role;
+
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('mainAppContainer').classList.remove('hidden');
+
+            applyAuthenticatedUserUI(foundUser);
+            renderSidebarProjectTree();
+            renderAvatarFilters();
+            renderPriorityFilterPills();
+            renderBoard();
+            initSortable();
+            showToast(`Selamat datang, ${foundUser.name}!`, 'success');
+        }
+
+        function handleLogout() {
+            currentUserId = null;
+            selectedAssigneeFilter = null;
+            onlyMyTasks = false;
+            document.getElementById('loginPasswordInput').value = '';
+            document.getElementById('mainAppContainer').classList.add('hidden');
+            document.getElementById('loginScreen').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function applyAuthenticatedUserUI(user) {
+            document.getElementById('currentUserName').textContent = user.name;
+            document.getElementById('currentUserNip').textContent = `NIP: ${user.nip}`;
+            document.getElementById('currentUserAvatar').src = user.avatar;
+            document.getElementById('commentUserAvatar').src = user.avatar;
+
+            const rolePill = document.getElementById('activeRolePill');
+            const rolePillText = document.getElementById('activeRolePillText');
+            const btnExportExcel = document.getElementById('btnExportExcel');
+            const btnMyTasks = document.getElementById('btnMyTasks');
+
+            if (user.role === 'atl') {
+                rolePillText.textContent = 'Area Team Leader (ATL)';
+                rolePill.className = 'hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-700/80';
+                btnExportExcel.classList.remove('hidden');
+                btnExportExcel.classList.add('inline-flex');
+                if (btnMyTasks) btnMyTasks.classList.remove('hidden');
+            } else if (user.role === 'tl') {
+                rolePillText.textContent = 'TL (Team Leader)';
+                rolePill.className = 'hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200/80 dark:border-amber-700/80';
+                btnExportExcel.classList.add('hidden');
+                btnExportExcel.classList.remove('inline-flex');
+                if (btnMyTasks) btnMyTasks.classList.remove('hidden');
+            } else {
+                rolePillText.textContent = 'IT Staff';
+                rolePill.className = 'hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-700/80';
+                btnExportExcel.classList.add('hidden');
+                btnExportExcel.classList.remove('inline-flex');
+                // Staff only sees their own PIC anyway, so hide redundant My Tasks toggle
+                if (btnMyTasks) btnMyTasks.classList.add('hidden');
+            }
+        }
+
+        // 5. SIDEBAR TREE NAVIGATION (PROJECTS & SUB-PROJECTS)
+        function toggleBoardDropdown(prefix, event) {
+            if (event) event.stopPropagation();
+            expandedBoards[prefix] = !expandedBoards[prefix];
+            renderSidebarProjectTree();
+        }
+
+        function selectSidebarScope(boardPrefix, subProjectId) {
+            selectedBoardFilter = boardPrefix;
+            selectedSubProjectFilter = subProjectId;
+
+            const scopeBoardBadge = document.getElementById('activeScopeBoardBadge');
+            const scopeTitle = document.getElementById('activeScopeTitle');
+            const scopeSubSep = document.getElementById('activeScopeSubSep');
+            const scopeSubBadge = document.getElementById('activeScopeSubBadge');
+
+            if (boardPrefix === 'ALL') {
+                scopeBoardBadge.textContent = 'ALL';
+                scopeTitle.textContent = 'Semua Board IT';
+                scopeSubSep.classList.add('hidden');
+                scopeSubBadge.classList.add('hidden');
+            } else {
+                expandedBoards[boardPrefix] = true;
+                scopeBoardBadge.textContent = boardPrefix;
+                scopeTitle.textContent = boards[boardPrefix] || boardPrefix;
+
+                if (subProjectId && subProjectId !== 'ALL') {
+                    const sp = subProjects.find(s => s.id === subProjectId);
+                    scopeSubSep.classList.remove('hidden');
+                    scopeSubBadge.classList.remove('hidden');
+                    scopeSubBadge.textContent = sp ? sp.name : subProjectId;
+                } else {
+                    scopeSubSep.classList.add('hidden');
+                    scopeSubBadge.classList.add('hidden');
+                }
+            }
+
+            renderSidebarProjectTree();
+            renderBoard();
+        }
+
+        function renderSidebarProjectTree() {
+            const treeEl = document.getElementById('sidebarProjectTree');
+            const allBtn = document.getElementById('navAllBoardsBtn');
+            const allCount = document.getElementById('sidebarAllCount');
+            if (!treeEl) return;
+
+            const visibleTasks = getVisibleTasks();
+            allCount.textContent = visibleTasks.length;
+            if (selectedBoardFilter === 'ALL') {
+                allBtn.className = 'w-full px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-between transition cursor-pointer bg-brand-600 text-white shadow-sm shadow-brand-600/25';
+                allCount.className = 'px-2 py-0.5 text-[10px] font-mono rounded-full bg-white/20 text-white';
+            } else {
+                allBtn.className = 'w-full px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-between transition cursor-pointer text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800';
+                allCount.className = 'px-2 py-0.5 text-[10px] font-mono rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200';
+            }
+
+            treeEl.innerHTML = Object.keys(boards).map(prefix => {
+                const boardName = boards[prefix];
+                const boardTasksCount = visibleTasks.filter(t => t.board === prefix).length;
+                const boardSubs = subProjects.filter(sp => sp.board === prefix);
+                const isBoardSelected = selectedBoardFilter === prefix && selectedSubProjectFilter === 'ALL';
+                const isExpanded = !!expandedBoards[prefix];
+
+                const rowClass = isBoardSelected
+                    ? 'bg-brand-600 text-white shadow-sm shadow-brand-600/25'
+                    : (selectedBoardFilter === prefix
+                        ? 'bg-brand-50 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 border border-brand-200/70 dark:border-brand-800/70'
+                        : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/80');
+
+                const prefixPillClass = isBoardSelected
+                    ? 'bg-white/20 text-white border-white/25'
+                    : 'bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300/70 dark:border-slate-700';
+
+                const countPillClass = isBoardSelected
+                    ? 'bg-white/20 text-white'
+                    : 'bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300';
+
+                const subHtml = isExpanded && boardSubs.length > 0 ? `
+                    <div class="mt-1 ml-3 pl-3 border-l-2 border-slate-200 dark:border-slate-800 space-y-1">
+                        ${boardSubs.map(sp => {
+                            const spCount = visibleTasks.filter(t => t.board === prefix && t.subProjectId === sp.id).length;
+                            const isSubSelected = selectedBoardFilter === prefix && selectedSubProjectFilter === sp.id;
+                            const subBtnClass = isSubSelected
+                                ? 'bg-emerald-600 text-white font-bold shadow-xs'
+                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium';
+                            const dotClass = isSubSelected ? 'bg-white' : 'bg-emerald-500';
+                            return `
+                                <button onclick="selectSidebarScope('${prefix}', '${sp.id}')" class="w-full px-2.5 py-1.5 rounded-lg text-[11px] flex items-center justify-between gap-2 transition cursor-pointer ${subBtnClass}">
+                                    <span class="flex items-center gap-2 truncate">
+                                        <span class="w-1.5 h-1.5 rounded-full shrink-0 ${dotClass}"></span>
+                                        <span class="truncate">${escapeHtml(sp.name)}</span>
+                                    </span>
+                                    <span class="text-[10px] font-mono opacity-80 shrink-0">${spCount}</span>
+                                </button>
+                            `;
+                        }).join('')}
+                    </div>
+                ` : '';
+
+                return `
+                    <div>
+                        <div onclick="selectSidebarScope('${prefix}', 'ALL')" class="w-full px-2.5 py-2 rounded-xl text-xs font-bold flex items-center justify-between gap-1.5 transition cursor-pointer ${rowClass}">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <span class="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${prefixPillClass}">${prefix}</span>
+                                <span class="truncate">${escapeHtml(boardName)}</span>
+                            </div>
+                            <div class="flex items-center gap-1 shrink-0">
+                                <span class="px-1.5 py-0.5 text-[10px] font-mono rounded-full ${countPillClass}">${boardTasksCount}</span>
+                                <button type="button" onclick="toggleBoardDropdown('${prefix}', event)" class="p-1 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 transition cursor-pointer" title="Buka/Tutup Sub-Project">
+                                    <i data-lucide="${isExpanded ? 'chevron-down' : 'chevron-right'}" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
+                        </div>
+                        ${subHtml}
+                    </div>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+        }
+
+        // 6. TOOLBAR FILTERS (CATEGORY, PRIORITY/TIER, TIMEFRAME, SORT, PIC)
+        function setCategoryFilter(catKey) {
+            selectedCategoryFilter = catKey;
+            selectedPriorityFilter = 'all';
+
+            document.querySelectorAll('.cat-filter-btn').forEach(btn => {
+                const active = btn.getAttribute('data-cat') === catKey;
+                if (active) {
+                    btn.className = 'cat-filter-btn px-2.5 py-1 rounded-lg text-xs font-semibold transition bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs flex items-center gap-1 whitespace-nowrap cursor-pointer';
+                } else {
+                    btn.className = 'cat-filter-btn px-2.5 py-1 rounded-lg text-xs font-semibold transition text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-700/60 flex items-center gap-1 whitespace-nowrap cursor-pointer';
+                }
+            });
+
+            renderPriorityFilterPills();
+            renderBoard();
+        }
+
+        function setPriorityFilter(prioKey) {
+            selectedPriorityFilter = prioKey;
+            renderPriorityFilterPills();
+            renderBoard();
+        }
+
+        function renderPriorityFilterPills() {
+            const container = document.getElementById('priorityFilterContainer');
+            if (!container) return;
+
+            let tiersToShow = [];
+            if (selectedCategoryFilter === 'maintenance') {
+                tiersToShow = CATEGORY_CONFIG.maintenance.tiers;
+            } else if (selectedCategoryFilter === 'development') {
+                tiersToShow = CATEGORY_CONFIG.development.tiers;
+            } else {
+                tiersToShow = [...CATEGORY_CONFIG.maintenance.tiers, ...CATEGORY_CONFIG.development.tiers];
+            }
+
+            const allActive = selectedPriorityFilter === 'all';
+            let html = `
+                <button onclick="setPriorityFilter('all')" class="px-2.5 py-1 rounded-lg text-xs font-semibold transition whitespace-nowrap cursor-pointer ${allActive ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs' : 'text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-700/60'}">
+                    Semua Level
+                </button>
+            `;
+
+            html += tiersToShow.map(tier => {
+                const isActive = selectedPriorityFilter === tier.value;
+                return `
+                    <button onclick="setPriorityFilter('${tier.value}')" class="px-2.5 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${isActive ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs' : 'text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-700/60'}">
+                        <span class="w-2 h-2 rounded-full ${tier.dotClass}"></span>
+                        <span>${tier.label}</span>
+                    </button>
+                `;
+            }).join('');
+
+            container.innerHTML = html;
+        }
+
+        function setTimeFilter(timeKey) {
+            selectedTimeFilter = timeKey;
+            document.querySelectorAll('.time-filter-btn').forEach(btn => {
+                const active = btn.getAttribute('data-time') === timeKey;
+                btn.className = active
+                    ? 'time-filter-btn px-2 py-1 rounded-lg text-xs font-semibold transition bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs whitespace-nowrap cursor-pointer'
+                    : 'time-filter-btn px-2 py-1 rounded-lg text-xs font-semibold transition text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-700/60 whitespace-nowrap cursor-pointer';
+            });
+            renderBoard();
+        }
+
+        function toggleSortOrder() {
+            sortOrder = sortOrder === 'desc' ? 'asc' : 'desc';
+            const textEl = document.getElementById('sortOrderText');
+            const iconEl = document.getElementById('sortOrderIcon');
+            if (textEl) textEl.textContent = sortOrder === 'desc' ? 'Terbaru' : 'Terlama';
+            if (iconEl) iconEl.setAttribute('data-lucide', sortOrder === 'desc' ? 'arrow-down-wide-narrow' : 'arrow-up-narrow-wide');
+            lucide.createIcons();
+            renderBoard();
+        }
+
+        function renderAvatarFilters() {
+            const group = document.getElementById('avatarFilterGroup');
+            if (!group) return;
+            const visibleMembers = getAllowedMembers();
+
+            if (currentRole === 'it_staff') {
+                const self = visibleMembers[0];
+                group.innerHTML = self ? `
+                    <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700" title="Akses Staff: Hanya menampilkan PIC Anda sendiri">
+                        <img src="${self.avatar}" alt="${escapeHtml(self.name)}" class="w-5 h-5 rounded-full object-cover">
+                        <span class="text-[11px] font-semibold text-slate-700 dark:text-slate-200">PIC: ${escapeHtml(self.name.split(' ')[0])}</span>
+                    </div>
+                ` : '';
+                return;
+            }
+
+            group.innerHTML = visibleMembers.map(m => {
+                const isSelected = selectedAssigneeFilter === m.id;
+                return `
+                    <button type="button" onclick="toggleAssigneeFilter('${m.id}')" title="Filter PIC: ${escapeHtml(m.name)} (${escapeHtml(m.title)})" class="relative rounded-full transition transform hover:scale-105 hover:z-10 cursor-pointer ${isSelected ? 'ring-2 ring-brand-500 scale-105 z-10' : 'ring-2 ring-white dark:ring-slate-900 opacity-85 hover:opacity-100'}">
+                        <img src="${m.avatar}" alt="${escapeHtml(m.name)}" class="w-7 h-7 rounded-full object-cover">
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function toggleAssigneeFilter(memberId) {
+            selectedAssigneeFilter = selectedAssigneeFilter === memberId ? null : memberId;
+            onlyMyTasks = false;
+            updateMyTasksBtnStyle();
+            renderAvatarFilters();
+            renderBoard();
+        }
+
+        function toggleMyTasks() {
+            onlyMyTasks = !onlyMyTasks;
+            if (onlyMyTasks) {
+                selectedAssigneeFilter = null;
+                renderAvatarFilters();
+            }
+            updateMyTasksBtnStyle();
+            renderBoard();
+        }
+
+        function updateMyTasksBtnStyle() {
+            const btn = document.getElementById('btnMyTasks');
+            if (!btn) return;
+            btn.className = onlyMyTasks
+                ? 'px-2.5 py-1.5 rounded-xl text-xs font-semibold border border-brand-500 bg-brand-600 text-white shadow-xs transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap'
+                : 'px-2.5 py-1.5 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap';
+        }
+
+        // 7. DATE PARSING & KANBAN BOARD RENDERING
+        function parseCreatedAtTimestamp(str) {
+            if (!str) return 0;
+            const monthMap = {
+                Jan: 0, Feb: 1, Mar: 2, Apr: 3, Mei: 4, Jun: 5,
+                Jul: 6, Agu: 7, Sep: 8, Okt: 9, Nov: 10, Des: 11
+            };
+            const match = str.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4}),\s*(\d{1,2}):(\d{2})$/);
+            if (match) {
+                const day = parseInt(match[1], 10);
+                const month = monthMap[match[2]] !== undefined ? monthMap[match[2]] : 0;
+                const year = parseInt(match[3], 10);
+                const hour = parseInt(match[4], 10);
+                const min = parseInt(match[5], 10);
+                return new Date(year, month, day, hour, min).getTime();
+            }
+            const parsed = Date.parse(str);
+            return isNaN(parsed) ? 0 : parsed;
+        }
+
+        function getFilteredTasks() {
+            const searchQuery = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
+            const refNow = Math.max(Date.now(), new Date(2026, 10, 21, 23, 59).getTime());
+            const allowedIds = new Set(getAllowedMemberIds());
+
+            const filtered = tasks.filter(t => {
+                // Enforce role-based PIC visibility (ATL: all, TL: self + subordinates, Staff: self only)
+                if (!allowedIds.has(t.assigneeId)) return false;
+
+                if (selectedBoardFilter !== 'ALL' && t.board !== selectedBoardFilter) return false;
+                if (selectedSubProjectFilter !== 'ALL' && t.subProjectId !== selectedSubProjectFilter) return false;
+
+                const cat = t.category || 'maintenance';
+                if (selectedCategoryFilter !== 'all' && cat !== selectedCategoryFilter) return false;
+                if (selectedPriorityFilter !== 'all' && t.priority !== selectedPriorityFilter) return false;
+
+                if (onlyMyTasks && t.assigneeId !== currentUserId) return false;
+                if (selectedAssigneeFilter && t.assigneeId !== selectedAssigneeFilter) return false;
+
+                if (selectedTimeFilter !== 'all') {
+                    const ts = parseCreatedAtTimestamp(t.createdAt);
+                    if (ts > 0) {
+                        const diffDays = (refNow - ts) / (1000 * 60 * 60 * 24);
+                        if (selectedTimeFilter === '1d' && diffDays > 1.5) return false;
+                        if (selectedTimeFilter === '7d' && diffDays > 7) return false;
+                        if (selectedTimeFilter === '30d' && diffDays > 30) return false;
+                    }
+                }
+
+                if (searchQuery) {
+                    const matchCode = t.code.toLowerCase().includes(searchQuery);
+                    const matchTitle = t.title.toLowerCase().includes(searchQuery);
+                    if (!matchCode && !matchTitle) return false;
+                }
+
+                return true;
+            });
+
+            filtered.sort((a, b) => {
+                const ta = parseCreatedAtTimestamp(a.createdAt);
+                const tb = parseCreatedAtTimestamp(b.createdAt);
+                return sortOrder === 'desc' ? tb - ta : ta - tb;
+            });
+
+            return filtered;
+        }
+
+        function updateBoardProgressSummary(filteredTasks) {
+            const total = filteredTasks.length;
+            const done = filteredTasks.filter(t => t.status === 'done').length;
+            const critActive = filteredTasks.filter(t => t.priority === 'critical' && t.status !== 'done').length;
+            const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+
+            const pctEl = document.getElementById('summaryCompletionPct');
+            const ratioEl = document.getElementById('summaryDoneRatio');
+            const critEl = document.getElementById('summaryCriticalBadge');
+
+            if (pctEl) pctEl.textContent = `${pct}%`;
+            if (ratioEl) ratioEl.textContent = `(${done}/${total})`;
+            if (critEl) {
+                if (critActive > 0) {
+                    critEl.className = 'flex items-center gap-1 text-[11px] font-bold text-rose-600 dark:text-rose-400';
+                    critEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span><span>${critActive} Critical</span>`;
+                } else {
+                    critEl.className = 'flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400';
+                    critEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span><span>0 Critical</span>`;
+                }
+            }
+        }
+
+        function renderBoard() {
+            const filtered = getFilteredTasks();
+            updateBoardProgressSummary(filtered);
+
+            const cols = {
+                todo: document.getElementById('col-todo'),
+                in_progress: document.getElementById('col-in_progress'),
+                done: document.getElementById('col-done')
+            };
+
+            Object.keys(cols).forEach(statusKey => {
+                const colEl = cols[statusKey];
+                if (!colEl) return;
+                const items = filtered.filter(t => t.status === statusKey);
+                const countEl = document.getElementById(`count-${statusKey}`);
+                if (countEl) countEl.textContent = items.length;
+
+                if (items.length === 0) {
+                    colEl.innerHTML = `
+                        <div class="h-28 rounded-xl border-2 border-dashed border-slate-200/80 dark:border-slate-800 flex flex-col items-center justify-center text-slate-400 text-xs gap-1">
+                            <span>Tidak ada task</span>
+                        </div>
+                    `;
+                } else {
+                    colEl.innerHTML = '';
+                    items.forEach(t => colEl.appendChild(createTaskCardElement(t)));
+                }
+            });
+
+            lucide.createIcons();
+        }
+
+        function createTaskCardElement(task) {
+            const card = document.createElement('div');
+            card.setAttribute('data-id', task.id);
+            card.onclick = () => openDetailModal(task.id);
+
+            const catKey = task.category || 'maintenance';
+            const catCfg = CATEGORY_CONFIG[catKey] || CATEGORY_CONFIG.maintenance;
+            const tierCfg = catCfg.tiers.find(tier => tier.value === task.priority) || catCfg.tiers[0];
+            const subProj = subProjects.find(sp => sp.id === task.subProjectId);
+            const assignee = teamMembers.find(m => m.id === task.assigneeId);
+
+            const subs = task.subtasks || [];
+            const doneSubs = subs.filter(s => s.done).length;
+            const subPct = subs.length > 0 ? Math.round((doneSubs / subs.length) * 100) : 0;
+
+            const isCritical = task.priority === 'critical' && task.status !== 'done';
+            const borderAccent = isCritical
+                ? 'border-rose-300 dark:border-rose-800/80 ring-1 ring-rose-500/20'
+                : 'border-slate-200/90 dark:border-slate-800 hover:border-brand-400 dark:hover:border-brand-600';
+
+            card.className = `group bg-white dark:bg-slate-900 p-3.5 rounded-xl border ${borderAccent} shadow-xs hover:shadow-md transition-all cursor-pointer select-none space-y-2.5`;
+
+            card.innerHTML = `
+                <!-- Top Row: Code + Category + Priority/Tier -->
+                <div class="flex items-center justify-between gap-1.5 flex-wrap">
+                    <div class="flex items-center gap-1.5">
+                        <span class="font-mono text-[11px] font-bold text-slate-500 dark:text-slate-400">${escapeHtml(task.code)}</span>
+                        <span class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md border ${catCfg.badgeClass}">
+                            <i data-lucide="${catCfg.icon}" class="w-2.5 h-2.5"></i>
+                            ${catCfg.shortLabel}
+                        </span>
+                    </div>
+                    <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${tierCfg.pillClass}">
+                        <span class="w-1.5 h-1.5 rounded-full ${tierCfg.dotClass}"></span>
+                        ${tierCfg.label}
+                    </span>
+                </div>
+
+                <!-- Task Title -->
+                <h3 class="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-slate-100 leading-snug group-hover:text-brand-600 dark:group-hover:text-brand-400 transition">
+                    ${escapeHtml(task.title)}
+                </h3>
+
+                <!-- Sub-Project Badge -->
+                ${subProj ? `
+                    <div>
+                        <span class="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            ${escapeHtml(subProj.name)}
+                        </span>
+                    </div>
+                ` : ''}
+
+                <!-- Sub-tasks Progress Bar (If any) -->
+                ${subs.length > 0 ? `
+                    <div class="space-y-1 pt-0.5">
+                        <div class="flex items-center justify-between text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                            <span class="flex items-center gap-1">
+                                <i data-lucide="check-square" class="w-3 h-3 text-brand-500"></i>
+                                Sub-tasks: ${doneSubs}/${subs.length}
+                            </span>
+                            <span class="font-mono">${subPct}%</span>
+                        </div>
+                        <div class="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div class="h-full ${subPct === 100 ? 'bg-emerald-500' : 'bg-brand-500'} rounded-full transition-all" style="width: ${subPct}%"></div>
+                        </div>
+                    </div>
+                ` : ''}
+
+                <!-- Footer: Created At Timestamp + Assignee Avatar -->
+                <div class="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-1 text-[10px] font-mono text-slate-400" title="Tanggal & Waktu Task Dibuat">
+                        <i data-lucide="clock" class="w-3 h-3"></i>
+                        <span>${escapeHtml(task.createdAt || '-')}</span>
+                    </div>
+                    ${assignee ? `
+                        <div class="flex items-center gap-1.5" title="PIC: ${escapeHtml(assignee.name)}">
+                            <span class="text-[10px] font-medium text-slate-500 dark:text-slate-400 hidden sm:inline">${escapeHtml(assignee.name.split(' ')[0])}</span>
+                            <img src="${assignee.avatar}" alt="${escapeHtml(assignee.name)}" class="w-6 h-6 rounded-full object-cover ring-1 ring-slate-200 dark:ring-slate-700">
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            return card;
+        }
+
+        function initSortable() {
+            sortableInstances.forEach(s => s.destroy());
+            sortableInstances = [];
+
+            document.querySelectorAll('.kanban-column').forEach(colEl => {
+                const instance = new Sortable(colEl, {
+                    group: 'itflow-kanban',
+                    animation: 160,
+                    ghostClass: 'sortable-ghost',
+                    dragClass: 'sortable-drag',
+                    onEnd: function (evt) {
+                        const taskId = evt.item.getAttribute('data-id');
+                        const newStatus = evt.to.getAttribute('data-status');
+                        const task = tasks.find(t => t.id === taskId);
+                        if (!task || task.status === newStatus) return;
+
+                        if (newStatus === 'done') {
+                            const unfinished = (task.subtasks || []).filter(s => !s.done).length;
+                            if (unfinished > 0) {
+                                showToast(`Perhatian: Masih ada ${unfinished} sub-task yang belum selesai pada ${task.code}.`, 'warning');
+                            }
+                        }
+
+                        task.status = newStatus;
+                        renderBoard();
+                        renderSidebarProjectTree();
+                    }
+                });
+                sortableInstances.push(instance);
+            });
+        }
+
+        // 8. MODAL 1: TASK DETAIL, SUB-TASKS & EXPLICIT SAVE BUTTON
+        function openDetailModal(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            activeTaskId = taskId;
+            draftTask = JSON.parse(JSON.stringify(task));
+            hasUnsavedChanges = false;
+            updateUnsavedBadge();
+
+            document.getElementById('detailTaskCode').textContent = draftTask.code;
+            document.getElementById('detailBoardBadge').textContent = boards[draftTask.board] || draftTask.board;
+            document.getElementById('detailTitleInput').value = draftTask.title;
+            document.getElementById('detailDescInput').value = draftTask.description || '';
+            document.getElementById('detailStatusSelect').value = draftTask.status;
+            document.getElementById('detailDueDateInput').value = draftTask.dueDate || '';
+
+            populateDetailSubProjectOptions();
+            populateDetailAssigneeOptions();
+            renderDetailCategoryAndPriority();
+            renderDetailSubtasks();
+            renderDetailComments();
+
+            const reporter = teamMembers.find(m => m.id === draftTask.reporterId);
+            document.getElementById('detailReporterName').textContent = reporter ? reporter.name : 'Sistem IT';
+            document.getElementById('detailCreatedAt').textContent = draftTask.createdAt || '-';
+
+            const modal = document.getElementById('detailModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            lucide.createIcons();
+        }
+
+        function closeDetailModal() {
+            activeTaskId = null;
+            draftTask = null;
+            hasUnsavedChanges = false;
+            const modal = document.getElementById('detailModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function markDraftDirty() {
+            hasUnsavedChanges = true;
+            updateUnsavedBadge();
+        }
+
+        function updateUnsavedBadge() {
+            const badge = document.getElementById('unsavedChangesBadge');
+            if (!badge) return;
+            if (hasUnsavedChanges) {
+                badge.classList.remove('hidden');
+                badge.classList.add('inline-flex');
+            } else {
+                badge.classList.add('hidden');
+                badge.classList.remove('inline-flex');
+            }
+        }
+
+        function updateDraftField(field, value) {
+            if (!draftTask) return;
+            draftTask[field] = value;
+            markDraftDirty();
+        }
+
+        function populateDetailSubProjectOptions() {
+            const sel = document.getElementById('detailSubProjectSelect');
+            if (!sel || !draftTask) return;
+            const boardSubs = subProjects.filter(sp => sp.board === draftTask.board);
+            sel.innerHTML = `<option value="">-- Tanpa Sub-Project --</option>` +
+                boardSubs.map(sp => `<option value="${sp.id}">${escapeHtml(sp.name)}</option>`).join('');
+            sel.value = draftTask.subProjectId || '';
+        }
+
+        function populateDetailAssigneeOptions() {
+            const sel = document.getElementById('detailAssigneeSelect');
+            const btnMe = document.getElementById('btnAssignToMe');
+            if (!sel || !draftTask) return;
+
+            const allowedMembers = getAllowedMembers();
+            sel.innerHTML = allowedMembers.map(m => `<option value="${m.id}">${escapeHtml(m.name)} (${escapeHtml(m.title)})</option>`).join('');
+            sel.value = draftTask.assigneeId || '';
+
+            if (currentRole === 'it_staff') {
+                sel.disabled = true;
+                sel.classList.add('opacity-75', 'cursor-not-allowed');
+                if (btnMe) btnMe.classList.add('hidden');
+            } else {
+                sel.disabled = false;
+                sel.classList.remove('opacity-75', 'cursor-not-allowed');
+                if (btnMe) btnMe.classList.remove('hidden');
+            }
+        }
+
+        function assignToMe() {
+            if (!draftTask || !currentUserId) return;
+            draftTask.assigneeId = currentUserId;
+            document.getElementById('detailAssigneeSelect').value = currentUserId;
+            markDraftDirty();
+        }
+
+        function changeDraftCategory(catKey) {
+            if (!draftTask) return;
+            draftTask.category = catKey;
+            const cfg = CATEGORY_CONFIG[catKey] || CATEGORY_CONFIG.maintenance;
+            const validTier = cfg.tiers.some(t => t.value === draftTask.priority);
+            if (!validTier) {
+                draftTask.priority = cfg.tiers[0].value;
+            }
+            markDraftDirty();
+            renderDetailCategoryAndPriority();
+        }
+
+        function setDraftPriority(prioVal) {
+            if (!draftTask) return;
+            draftTask.priority = prioVal;
+            markDraftDirty();
+            renderDetailCategoryAndPriority();
+        }
+
+        function renderDetailCategoryAndPriority() {
+            if (!draftTask) return;
+            const activeCat = draftTask.category || 'maintenance';
+
+            document.querySelectorAll('.detail-cat-btn').forEach(btn => {
+                const isSelected = btn.getAttribute('data-cat-val') === activeCat;
+                btn.className = isSelected
+                    ? 'detail-cat-btn py-2 px-2.5 rounded-xl border-2 border-brand-500 bg-brand-50 dark:bg-brand-950/70 text-brand-700 dark:text-brand-300 text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer'
+                    : 'detail-cat-btn py-2 px-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer';
+            });
+
+            const cfg = CATEGORY_CONFIG[activeCat] || CATEGORY_CONFIG.maintenance;
+            const labelEl = document.getElementById('detailPriorityLabel');
+            if (labelEl) {
+                labelEl.textContent = activeCat === 'development' ? 'Skala Development' : 'Prioritas Maintenance';
+            }
+
+            const btnContainer = document.getElementById('detailPriorityButtons');
+            if (btnContainer) {
+                btnContainer.innerHTML = cfg.tiers.map(tier => {
+                    const isSelected = draftTask.priority === tier.value;
+                    return `
+                        <button type="button" onclick="setDraftPriority('${tier.value}')" class="py-2 px-2 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${isSelected ? 'ring-2 ring-brand-500 ' + tier.pillClass : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'}">
+                            <span class="w-2 h-2 rounded-full ${tier.dotClass}"></span>
+                            <span>${tier.label}</span>
+                        </button>
+                    `;
+                }).join('');
+            }
+            lucide.createIcons();
+        }
+
+        function renderDetailSubtasks() {
+            if (!draftTask) return;
+            const listEl = document.getElementById('detailSubtaskList');
+            const counterEl = document.getElementById('detailSubtaskCounter');
+            const barEl = document.getElementById('detailSubtaskProgressBar');
+
+            const subs = draftTask.subtasks || [];
+            const doneCount = subs.filter(s => s.done).length;
+            const pct = subs.length > 0 ? Math.round((doneCount / subs.length) * 100) : 0;
+
+            counterEl.textContent = `${doneCount}/${subs.length} Selesai (${pct}%)`;
+            barEl.style.width = `${pct}%`;
+
+            if (subs.length === 0) {
+                listEl.innerHTML = `<p class="text-xs text-slate-400 italic py-1">Belum ada sub-task. Tambahkan langkah kerja di bawah.</p>`;
+            } else {
+                listEl.innerHTML = subs.map((s, idx) => `
+                    <div class="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80">
+                        <label class="flex items-center gap-2.5 flex-1 cursor-pointer select-none">
+                            <input type="checkbox" ${s.done ? 'checked' : ''} onchange="toggleDraftSubtask(${idx})" class="w-4 h-4 rounded text-brand-600 focus:ring-brand-500 cursor-pointer">
+                            <span class="text-xs sm:text-sm ${s.done ? 'line-through text-slate-400' : 'text-slate-700 dark:text-slate-200 font-medium'}">${escapeHtml(s.title)}</span>
+                        </label>
+                        <button type="button" onclick="removeDraftSubtask(${idx})" class="p-1 text-slate-400 hover:text-rose-500 transition cursor-pointer" title="Hapus sub-task">
+                            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                `).join('');
+            }
+            lucide.createIcons();
+        }
+
+        function toggleDraftSubtask(index) {
+            if (!draftTask || !draftTask.subtasks[index]) return;
+            draftTask.subtasks[index].done = !draftTask.subtasks[index].done;
+            markDraftDirty();
+            renderDetailSubtasks();
+        }
+
+        function removeDraftSubtask(index) {
+            if (!draftTask) return;
+            draftTask.subtasks.splice(index, 1);
+            markDraftDirty();
+            renderDetailSubtasks();
+        }
+
+        function handleAddSubtask(e) {
+            e.preventDefault();
+            if (!draftTask) return;
+            const input = document.getElementById('newSubtaskInput');
+            const title = input.value.trim();
+            if (!title) return;
+            if (!draftTask.subtasks) draftTask.subtasks = [];
+            draftTask.subtasks.push({
+                id: 'sub-' + Date.now(),
+                title,
+                done: false
+            });
+            input.value = '';
+            markDraftDirty();
+            renderDetailSubtasks();
+        }
+
+        function renderDetailComments() {
+            if (!draftTask) return;
+            const listEl = document.getElementById('detailCommentList');
+            const comments = draftTask.comments || [];
+
+            if (comments.length === 0) {
+                listEl.innerHTML = `<p class="text-xs text-slate-400 italic">Belum ada catatan teknis pada task ini.</p>`;
+                return;
+            }
+
+            listEl.innerHTML = comments.map(c => {
+                const author = teamMembers.find(m => m.id === c.userId) || teamMembers[0];
+                return `
+                    <div class="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-800">
+                        <img src="${author.avatar}" alt="${escapeHtml(author.name)}" class="w-7 h-7 rounded-full shrink-0 mt-0.5">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-xs font-bold text-slate-800 dark:text-slate-100">${escapeHtml(author.name)}</span>
+                                <span class="text-[10px] font-mono text-slate-400">${escapeHtml(c.time)}</span>
+                            </div>
+                            <p class="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">${escapeHtml(c.text)}</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function handleAddComment(e) {
+            e.preventDefault();
+            if (!draftTask) return;
+            const input = document.getElementById('newCommentInput');
+            const text = input.value.trim();
+            if (!text) return;
+            if (!draftTask.comments) draftTask.comments = [];
+            draftTask.comments.push({
+                id: 'c-' + Date.now(),
+                userId: currentUserId || 'u_farhan',
+                text,
+                time: getFormattedNow()
+            });
+            input.value = '';
+            markDraftDirty();
+            renderDetailComments();
+        }
+
+        function saveDetailChanges() {
+            if (!activeTaskId || !draftTask) return;
+            const idx = tasks.findIndex(t => t.id === activeTaskId);
+            if (idx === -1) return;
+
+            if (!draftTask.title.trim()) {
+                showToast('Judul task tidak boleh kosong.', 'error');
+                return;
+            }
+
+            tasks[idx] = JSON.parse(JSON.stringify(draftTask));
+            const savedCode = tasks[idx].code;
+            closeDetailModal();
+            renderSidebarProjectTree();
+            renderBoard();
+            showToast(`Perubahan pada ${savedCode} berhasil disimpan!`, 'success');
+        }
+
+        function deleteCurrentTask() {
+            if (!activeTaskId) return;
+            const idx = tasks.findIndex(t => t.id === activeTaskId);
+            if (idx === -1) return;
+            const deletedCode = tasks[idx].code;
+            tasks.splice(idx, 1);
+            closeDetailModal();
+            renderSidebarProjectTree();
+            renderBoard();
+            showToast(`Task ${deletedCode} telah dihapus.`, 'info');
+        }
+
+        // 9. MODAL 2: CREATE NEW TASK
+        function openCreateModal(defaultStatus = 'todo') {
+            const boardSel = document.getElementById('createBoardSelect');
+            boardSel.innerHTML = Object.keys(boards).map(p => `<option value="${p}">${p} — ${escapeHtml(boards[p])}</option>`).join('');
+            if (selectedBoardFilter !== 'ALL' && boards[selectedBoardFilter]) {
+                boardSel.value = selectedBoardFilter;
+            }
+
+            syncCreateSubProjectOptions();
+            if (selectedSubProjectFilter !== 'ALL') {
+                document.getElementById('createSubProjectSelect').value = selectedSubProjectFilter;
+            }
+
+            document.getElementById('createStatusSelect').value = defaultStatus;
+            const assigneeSel = document.getElementById('createAssigneeSelect');
+            const allowedMembers = getAllowedMembers();
+            assigneeSel.innerHTML = allowedMembers.map(m => `<option value="${m.id}">${escapeHtml(m.name)} (${escapeHtml(m.title)})</option>`).join('');
+            if (currentUserId) assigneeSel.value = currentUserId;
+
+            if (currentRole === 'it_staff') {
+                assigneeSel.disabled = true;
+                assigneeSel.classList.add('opacity-75', 'cursor-not-allowed');
+            } else {
+                assigneeSel.disabled = false;
+                assigneeSel.classList.remove('opacity-75', 'cursor-not-allowed');
+            }
+
+            document.getElementById('createTitleInput').value = '';
+            document.getElementById('createDescInput').value = '';
+            document.getElementById('createSubtasksInput').value = '';
+            document.getElementById('createCategorySelect').value = 'maintenance';
+            syncCreatePriorityOptions();
+
+            const modal = document.getElementById('createModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            lucide.createIcons();
+        }
+
+        function closeCreateModal() {
+            const modal = document.getElementById('createModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function syncCreateSubProjectOptions() {
+            const boardPrefix = document.getElementById('createBoardSelect').value;
+            const subSel = document.getElementById('createSubProjectSelect');
+            const filteredSubs = subProjects.filter(sp => sp.board === boardPrefix);
+            subSel.innerHTML = `<option value="">-- Umum / Tanpa Sub-Project --</option>` +
+                filteredSubs.map(sp => `<option value="${sp.id}">${escapeHtml(sp.name)}</option>`).join('');
+        }
+
+        function syncCreatePriorityOptions() {
+            const cat = document.getElementById('createCategorySelect').value;
+            const label = document.getElementById('createPriorityLabel');
+            const sel = document.getElementById('createPrioritySelect');
+            const cfg = CATEGORY_CONFIG[cat] || CATEGORY_CONFIG.maintenance;
+
+            label.textContent = cat === 'development' ? 'Skala (Development)' : 'Prioritas (Maintenance)';
+            sel.innerHTML = cfg.tiers.map(t => `<option value="${t.value}">${t.label} (${t.desc})</option>`).join('');
+            sel.value = cat === 'development' ? 'great' : 'high';
+        }
+
+        function handleCreateTask(e) {
+            e.preventDefault();
+            const board = document.getElementById('createBoardSelect').value;
+            const subProjectId = document.getElementById('createSubProjectSelect').value;
+            const status = document.getElementById('createStatusSelect').value;
+            const assigneeId = document.getElementById('createAssigneeSelect').value;
+            const title = document.getElementById('createTitleInput').value.trim();
+            const description = document.getElementById('createDescInput').value.trim();
+            const category = document.getElementById('createCategorySelect').value;
+            const priority = document.getElementById('createPrioritySelect').value;
+            const rawSubs = document.getElementById('createSubtasksInput').value;
+
+            if (!title) return;
+
+            const existingNumbers = tasks
+                .filter(t => t.board === board)
+                .map(t => parseInt(t.code.split('-')[1], 10))
+                .filter(n => !isNaN(n));
+            const nextNum = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 101;
+            const code = `${board}-${String(nextNum).padStart(3, '0')}`;
+
+            const subtasks = rawSubs
+                .split('\n')
+                .map(line => line.trim())
+                .filter(Boolean)
+                .map((stTitle, i) => ({
+                    id: `sub-${Date.now()}-${i}`,
+                    title: stTitle,
+                    done: false
+                }));
+
+            const newTask = {
+                id: 't-' + Date.now(),
+                code,
+                board,
+                subProjectId,
+                category,
+                title,
+                description,
+                status,
+                priority,
+                assigneeId,
+                reporterId: currentUserId || 'u_farhan',
+                dueDate: '',
+                createdAt: getFormattedNow(),
+                subtasks,
+                comments: []
+            };
+
+            tasks.unshift(newTask);
+            closeCreateModal();
+            renderSidebarProjectTree();
+            renderBoard();
+            showToast(`Task ${code} berhasil dibuat!`, 'success');
+        }
+
+        // 10. MODAL 3: PROJECT (BOARD) & SUB-PROJECT MANAGEMENT
+        function openNewBoardModal() {
+            switchBoardModalTab('new_project');
+            document.getElementById('newBoardName').value = '';
+            document.getElementById('newBoardPrefix').value = '';
+            document.getElementById('newBoardSubProjectsInput').value = '';
+            document.getElementById('newSubProjectName').value = '';
+
+            const subBoardSel = document.getElementById('newSubProjectBoardSelect');
+            subBoardSel.innerHTML = Object.keys(boards).map(p => `<option value="${p}">${p} — ${escapeHtml(boards[p])}</option>`).join('');
+            if (selectedBoardFilter !== 'ALL' && boards[selectedBoardFilter]) {
+                subBoardSel.value = selectedBoardFilter;
+            }
+
+            const modal = document.getElementById('newBoardModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            lucide.createIcons();
+        }
+
+        function closeNewBoardModal() {
+            const modal = document.getElementById('newBoardModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function switchBoardModalTab(tab) {
+            const tabNew = document.getElementById('tabNewProject');
+            const tabSub = document.getElementById('tabAddSubProject');
+            const formProj = document.getElementById('formCreateProject');
+            const formSub = document.getElementById('formAddSubProjectToExisting');
+
+            if (tab === 'new_project') {
+                tabNew.className = 'py-1.5 px-3 rounded-lg text-xs font-bold bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs transition cursor-pointer';
+                tabSub.className = 'py-1.5 px-3 rounded-lg text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition cursor-pointer';
+                formProj.classList.remove('hidden');
+                formSub.classList.add('hidden');
+            } else {
+                tabSub.className = 'py-1.5 px-3 rounded-lg text-xs font-bold bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs transition cursor-pointer';
+                tabNew.className = 'py-1.5 px-3 rounded-lg text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition cursor-pointer';
+                formSub.classList.remove('hidden');
+                formProj.classList.add('hidden');
+            }
+        }
+
+        function handleCreateBoard(e) {
+            e.preventDefault();
+            const name = document.getElementById('newBoardName').value.trim();
+            const prefix = document.getElementById('newBoardPrefix').value.trim().toUpperCase();
+            const rawSubs = document.getElementById('newBoardSubProjectsInput').value;
+
+            if (!name || !prefix) return;
+            if (boards[prefix]) {
+                showToast(`Prefix "${prefix}" sudah digunakan oleh project lain.`, 'error');
+                return;
+            }
+
+            boards[prefix] = name;
+            expandedBoards[prefix] = true;
+
+            rawSubs
+                .split('\n')
+                .map(line => line.trim())
+                .filter(Boolean)
+                .forEach((spName, idx) => {
+                    subProjects.push({
+                        id: `sp-${prefix.toLowerCase()}-${Date.now()}-${idx}`,
+                        board: prefix,
+                        name: spName
+                    });
+                });
+
+            closeNewBoardModal();
+            selectSidebarScope(prefix, 'ALL');
+            showToast(`Project ${prefix} (${name}) berhasil dibuat!`, 'success');
+        }
+
+        function handleCreateSubProject(e) {
+            e.preventDefault();
+            const board = document.getElementById('newSubProjectBoardSelect').value;
+            const name = document.getElementById('newSubProjectName').value.trim();
+            if (!board || !name) return;
+
+            subProjects.push({
+                id: `sp-${board.toLowerCase()}-${Date.now()}`,
+                board,
+                name
+            });
+            expandedBoards[board] = true;
+
+            closeNewBoardModal();
+            renderSidebarProjectTree();
+            renderBoard();
+            showToast(`Sub-Project "${name}" ditambahkan ke ${board}!`, 'success');
+        }
+
+        // 11. EXPORT RECAP TO STYLED EXCEL (.XLSX) — IT MANAGER ONLY
+        let selectedExportPeriod = '7d';
+
+        function getTasksForExport(periodKey, boardScope) {
+            const refNow = Math.max(Date.now(), new Date(2026, 10, 21, 23, 59).getTime());
+            return tasks.filter(t => {
+                if (boardScope && boardScope !== 'ALL' && t.board !== boardScope) return false;
+                if (periodKey !== 'all') {
+                    const taskTime = parseCreatedAtTimestamp(t.createdAt);
+                    if (taskTime > 0) {
+                        const diffDays = (refNow - taskTime) / (1000 * 60 * 60 * 24);
+                        if (periodKey === '1d' && diffDays > 1.5) return false;
+                        if (periodKey === '7d' && diffDays > 7) return false;
+                        if (periodKey === '30d' && diffDays > 30) return false;
+                    }
+                }
+                return true;
+            });
+        }
+
+        function openExportModal() {
+            if (currentRole !== 'atl') {
+                showToast('Fitur Rekap Excel hanya tersedia untuk role Area Team Leader (ATL).', 'error');
+                return;
+            }
+            const scopeSel = document.getElementById('exportBoardScope');
+            if (scopeSel) {
+                scopeSel.innerHTML = `<option value="ALL">Semua Project / Board IT</option>` +
+                    Object.keys(boards).map(p => `<option value="${p}">${p} — ${escapeHtml(boards[p])}</option>`).join('');
+                scopeSel.value = selectedBoardFilter !== 'ALL' ? selectedBoardFilter : 'ALL';
+            }
+            selectExportPeriod('7d');
+            const modal = document.getElementById('exportModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            lucide.createIcons();
+        }
+
+        function closeExportModal() {
+            const modal = document.getElementById('exportModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function selectExportPeriod(periodKey) {
+            selectedExportPeriod = periodKey;
+            document.querySelectorAll('.exp-period-btn').forEach(btn => {
+                const isSelected = btn.getAttribute('data-exp-period') === periodKey;
+                const titleDiv = btn.children[0];
+                const subDiv = btn.children[1];
+                if (isSelected) {
+                    btn.className = 'exp-period-btn p-3 rounded-xl border-2 border-emerald-500 bg-emerald-50/80 dark:bg-emerald-950/60 text-left transition cursor-pointer';
+                    if (titleDiv) titleDiv.className = 'text-xs font-bold text-emerald-800 dark:text-emerald-300';
+                    if (subDiv) subDiv.className = 'text-[11px] text-emerald-600/90 dark:text-emerald-400/80 mt-0.5';
+                } else {
+                    btn.className = 'exp-period-btn p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 hover:border-slate-300 dark:hover:border-slate-600 text-left transition cursor-pointer';
+                    if (titleDiv) titleDiv.className = 'text-xs font-bold text-slate-800 dark:text-slate-100';
+                    if (subDiv) subDiv.className = 'text-[11px] text-slate-500 dark:text-slate-400 mt-0.5';
+                }
+            });
+            updateExportPreviewCount();
+        }
+
+        function updateExportPreviewCount() {
+            const scopeSel = document.getElementById('exportBoardScope');
+            const boardScope = scopeSel ? scopeSel.value : 'ALL';
+            const matched = getTasksForExport(selectedExportPeriod, boardScope);
+            const badge = document.getElementById('exportMatchedCountBadge');
+            if (badge) badge.textContent = `${matched.length} Task`;
+        }
+
+        function confirmExportExcel() {
+            const scopeSel = document.getElementById('exportBoardScope');
+            const boardScope = scopeSel ? scopeSel.value : 'ALL';
+            closeExportModal();
+            exportRecapToExcel(selectedExportPeriod, boardScope);
+        }
+
+        function exportRecapToExcel(periodKey = 'all', boardScope = 'ALL') {
+            if (currentRole !== 'atl') {
+                showToast('Fitur Rekap Excel hanya tersedia untuk role Area Team Leader (ATL).', 'error');
+                return;
+            }
+
+            if (typeof XLSX === 'undefined') {
+                showToast('Library Excel sedang dimuat, coba sesaat lagi.', 'warning');
+                return;
+            }
+
+            const filteredTasks = getTasksForExport(periodKey, boardScope);
+            const periodLabels = {
+                '1d': '1 Hari Terakhir',
+                '7d': '7 Hari Terakhir',
+                '30d': '30 Hari Terakhir',
+                'all': 'Semua Periode'
+            };
+            const periodText = periodLabels[periodKey] || 'Semua Periode';
+            const scopeText = boardScope === 'ALL' ? 'Semua Project / Board IT' : `${boardScope} — ${boards[boardScope] || ''}`;
+
+            const managerUser = teamMembers.find(m => m.id === currentUserId) || teamMembers[0];
+            const exportTime = getFormattedNow();
+            const wb = XLSX.utils.book_new();
+
+            const statusLabels = {
+                todo: 'To Do',
+                in_progress: 'In Progress',
+                done: 'Done / Resolved'
+            };
+
+            const thinBorder = {
+                top: { style: 'thin', color: { rgb: 'CBD5E1' } },
+                bottom: { style: 'thin', color: { rgb: 'CBD5E1' } },
+                left: { style: 'thin', color: { rgb: 'CBD5E1' } },
+                right: { style: 'thin', color: { rgb: 'CBD5E1' } }
+            };
+            const headerBorder = {
+                top: { style: 'medium', color: { rgb: '0F172A' } },
+                bottom: { style: 'medium', color: { rgb: '0F172A' } },
+                left: { style: 'thin', color: { rgb: '334155' } },
+                right: { style: 'thin', color: { rgb: '334155' } }
+            };
+
+            const sBanner = {
+                font: { name: 'Calibri', sz: 14, bold: true, color: { rgb: 'FFFFFF' } },
+                fill: { fgColor: { rgb: '0F172A' } },
+                alignment: { vertical: 'center', horizontal: 'left', indent: 1 }
+            };
+            const sSubBanner = {
+                font: { name: 'Calibri', sz: 10, italic: true, color: { rgb: 'E2E8F0' } },
+                fill: { fgColor: { rgb: '1E293B' } },
+                alignment: { vertical: 'center', horizontal: 'left', indent: 1 }
+            };
+            const sMetaLabel = {
+                font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '334155' } },
+                fill: { fgColor: { rgb: 'F1F5F9' } },
+                border: thinBorder,
+                alignment: { vertical: 'center', horizontal: 'left' }
+            };
+            const sMetaVal = {
+                font: { name: 'Calibri', sz: 10, color: { rgb: '0F172A' } },
+                fill: { fgColor: { rgb: 'FFFFFF' } },
+                border: thinBorder,
+                alignment: { vertical: 'center', horizontal: 'left' }
+            };
+            const sTableHeader = {
+                font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: 'FFFFFF' } },
+                fill: { fgColor: { rgb: '1E3A8A' } },
+                border: headerBorder,
+                alignment: { vertical: 'center', horizontal: 'center', wrapText: true }
+            };
+            const sTotalRow = {
+                font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '0F172A' } },
+                fill: { fgColor: { rgb: 'DBEAFE' } },
+                border: {
+                    top: { style: 'medium', color: { rgb: '1E3A8A' } },
+                    bottom: { style: 'double', color: { rgb: '1E3A8A' } },
+                    left: { style: 'thin', color: { rgb: '93C5FD' } },
+                    right: { style: 'thin', color: { rgb: '93C5FD' } }
+                },
+                alignment: { vertical: 'center', horizontal: 'center' }
+            };
+
+            function getStatusStyle(status, isEven) {
+                const baseBg = isEven ? 'F8FAFC' : 'FFFFFF';
+                if (status === 'done') {
+                    return { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '065F46' } }, fill: { fgColor: { rgb: 'D1FAE5' } }, border: thinBorder, alignment: { vertical: 'center', horizontal: 'center' } };
+                }
+                if (status === 'in_progress') {
+                    return { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '1E40AF' } }, fill: { fgColor: { rgb: 'DBEAFE' } }, border: thinBorder, alignment: { vertical: 'center', horizontal: 'center' } };
+                }
+                return { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '475569' } }, fill: { fgColor: { rgb: baseBg } }, border: thinBorder, alignment: { vertical: 'center', horizontal: 'center' } };
+            }
+
+            function getPriorityStyle(prio, isEven) {
+                const baseBg = isEven ? 'F8FAFC' : 'FFFFFF';
+                if (prio === 'critical') {
+                    return { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '9F1239' } }, fill: { fgColor: { rgb: 'FFE4E6' } }, border: thinBorder, alignment: { vertical: 'center', horizontal: 'center' } };
+                }
+                if (prio === 'high') {
+                    return { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '92400E' } }, fill: { fgColor: { rgb: 'FEF3C7' } }, border: thinBorder, alignment: { vertical: 'center', horizontal: 'center' } };
+                }
+                if (prio === 'epic') {
+                    return { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '5B21B6' } }, fill: { fgColor: { rgb: 'EDE9FE' } }, border: thinBorder, alignment: { vertical: 'center', horizontal: 'center' } };
+                }
+                if (prio === 'great') {
+                    return { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '065F46' } }, fill: { fgColor: { rgb: 'D1FAE5' } }, border: thinBorder, alignment: { vertical: 'center', horizontal: 'center' } };
+                }
+                return { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '334155' } }, fill: { fgColor: { rgb: baseBg } }, border: thinBorder, alignment: { vertical: 'center', horizontal: 'center' } };
+            }
+
+            function styleSheetGrid(ws, totalCols, headerRowIdx, dataStartRowIdx, dataEndRowIdx, colAlignments, rowHeights = {}) {
+                const rowsCfg = [];
+                for (let r = 0; r <= dataEndRowIdx; r++) {
+                    rowsCfg[r] = { hpt: rowHeights[r] || (r === 0 ? 30 : r === 1 ? 20 : r === headerRowIdx ? 28 : 22) };
+                }
+                ws['!rows'] = rowsCfg;
+
+                for (let c = 0; c < totalCols; c++) {
+                    const c0 = XLSX.utils.encode_cell({ r: 0, c });
+                    const c1 = XLSX.utils.encode_cell({ r: 1, c });
+                    if (!ws[c0]) ws[c0] = { v: '', t: 's' };
+                    if (!ws[c1]) ws[c1] = { v: '', t: 's' };
+                    ws[c0].s = sBanner;
+                    ws[c1].s = sSubBanner;
+
+                    const ch = XLSX.utils.encode_cell({ r: headerRowIdx, c });
+                    if (ws[ch]) ws[ch].s = sTableHeader;
+                }
+
+                for (let r = dataStartRowIdx; r <= dataEndRowIdx; r++) {
+                    const isEven = (r - dataStartRowIdx) % 2 === 1;
+                    const bgRgb = isEven ? 'F8FAFC' : 'FFFFFF';
+                    for (let c = 0; c < totalCols; c++) {
+                        const addr = XLSX.utils.encode_cell({ r, c });
+                        if (!ws[addr]) ws[addr] = { v: '', t: 's' };
+                        if (!ws[addr].s) {
+                            ws[addr].s = {
+                                font: { name: 'Calibri', sz: 10, bold: c === 1, color: { rgb: '0F172A' } },
+                                fill: { fgColor: { rgb: bgRgb } },
+                                border: thinBorder,
+                                alignment: {
+                                    vertical: 'center',
+                                    horizontal: colAlignments[c] || 'left',
+                                    wrapText: true
+                                }
+                            };
+                        }
+                    }
+                }
+            }
+
+            // SHEET 1: REKAP DETAIL TASK
+            const totalFiltered = filteredTasks.length;
+            const doneFiltered = filteredTasks.filter(t => t.status === 'done').length;
+            const progFiltered = filteredTasks.filter(t => t.status === 'in_progress').length;
+            const todoFiltered = filteredTasks.filter(t => t.status === 'todo').length;
+
+            const detailRows = [
+                ['LAPORAN REKAPITULASI TASK DIVISI IT — ITFLOW'],
+                [`Periode Laporan: ${periodText}   |   Cakupan: ${scopeText}   |   Dicetak: ${exportTime}`],
+                [],
+                ['Dicetak Oleh:', `${managerUser.name} (NIP: ${managerUser.nip})`, '', 'Total Task:', totalFiltered, '', 'Done / Resolved:', doneFiltered, '', 'In Progress:', progFiltered, '', 'To Do:', todoFiltered],
+                [],
+                [
+                    'No',
+                    'Kode Task',
+                    'Project / Board',
+                    'Sub-Project',
+                    'Kategori',
+                    'Level / Prioritas',
+                    'Status',
+                    'Judul Pekerjaan',
+                    'PIC (Assignee)',
+                    'NIP PIC',
+                    'Progres Sub-Task',
+                    'Detail Checklist Sub-Task',
+                    'Tanggal Dibuat',
+                    'Target Selesai'
+                ]
+            ];
+
+            if (filteredTasks.length === 0) {
+                detailRows.push(['-', '-', 'Tidak ada task pada periode waktu yang dipilih.', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-']);
+            } else {
+                filteredTasks.forEach((t, index) => {
+                    const boardName = boards[t.board] ? `${t.board} - ${boards[t.board]}` : t.board;
+                    const subProj = subProjects.find(sp => sp.id === t.subProjectId);
+                    const catKey = t.category || 'maintenance';
+                    const catCfg = CATEGORY_CONFIG[catKey] || CATEGORY_CONFIG.maintenance;
+                    const tierCfg = catCfg.tiers.find(tier => tier.value === t.priority);
+                    const assignee = teamMembers.find(m => m.id === t.assigneeId);
+
+                    const subs = t.subtasks || [];
+                    const doneSubs = subs.filter(s => s.done).length;
+                    const subProgressStr = subs.length > 0 ? `${doneSubs}/${subs.length} (${Math.round((doneSubs / subs.length) * 100)}%)` : '-';
+                    const subDetailStr = subs.length > 0
+                        ? subs.map(s => `${s.done ? '☑' : '☐'} ${s.title}`).join('\n')
+                        : '-';
+
+                    detailRows.push([
+                        index + 1,
+                        t.code,
+                        boardName,
+                        subProj ? subProj.name : '-',
+                        catCfg.fullLabel,
+                        tierCfg ? tierCfg.label : t.priority,
+                        statusLabels[t.status] || t.status,
+                        t.title,
+                        assignee ? assignee.name : '-',
+                        assignee ? assignee.nip : '-',
+                        subProgressStr,
+                        subDetailStr,
+                        t.createdAt || '-',
+                        t.dueDate || '-'
+                    ]);
+                });
+            }
+
+            const wsDetail = XLSX.utils.aoa_to_sheet(detailRows);
+            wsDetail['!merges'] = [
+                { s: { r: 0, c: 0 }, e: { r: 0, c: 13 } },
+                { s: { r: 1, c: 0 }, e: { r: 1, c: 13 } },
+                { s: { r: 3, c: 1 }, e: { r: 3, c: 2 } }
+            ];
+
+            [0, 3, 6, 9, 12].forEach(c => {
+                const addr = XLSX.utils.encode_cell({ r: 3, c });
+                if (wsDetail[addr]) wsDetail[addr].s = sMetaLabel;
+            });
+            [1, 2, 4, 7, 10, 13].forEach(c => {
+                const addr = XLSX.utils.encode_cell({ r: 3, c });
+                if (wsDetail[addr]) wsDetail[addr].s = { ...sMetaVal, font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '0F172A' } }, alignment: { vertical: 'center', horizontal: c >= 4 ? 'center' : 'left' } };
+            });
+
+            const detailRowHeights = { 3: 24 };
+            filteredTasks.forEach((t, idx) => {
+                const r = 6 + idx;
+                const isEven = idx % 2 === 1;
+                const prioAddr = XLSX.utils.encode_cell({ r, c: 5 });
+                const statAddr = XLSX.utils.encode_cell({ r, c: 6 });
+                if (wsDetail[prioAddr]) wsDetail[prioAddr].s = getPriorityStyle(t.priority, isEven);
+                if (wsDetail[statAddr]) wsDetail[statAddr].s = getStatusStyle(t.status, isEven);
+
+                const subCount = (t.subtasks || []).length;
+                detailRowHeights[r] = Math.max(26, subCount * 16 + 8);
+            });
+
+            styleSheetGrid(wsDetail, 14, 5, 6, detailRows.length - 1, {
+                0: 'center', 1: 'center', 2: 'left', 3: 'left', 4: 'center',
+                5: 'center', 6: 'center', 7: 'left', 8: 'left', 9: 'center',
+                10: 'center', 11: 'left', 12: 'center', 13: 'center'
+            }, detailRowHeights);
+
+            wsDetail['!cols'] = [
+                { wch: 5 },
+                { wch: 12 },
+                { wch: 26 },
+                { wch: 24 },
+                { wch: 20 },
+                { wch: 15 },
+                { wch: 17 },
+                { wch: 38 },
+                { wch: 18 },
+                { wch: 13 },
+                { wch: 16 },
+                { wch: 42 },
+                { wch: 20 },
+                { wch: 15 }
+            ];
+            XLSX.utils.book_append_sheet(wb, wsDetail, 'Rekap Detail Task');
+
+            // SHEET 2: REKAP KINERJA TIM IT (PER PIC)
+            const picRows = [
+                ['REKAPITULASI BEBAN KERJA & KINERJA TIM IT'],
+                [`Periode Laporan: ${periodText}   |   Cakupan: ${scopeText}   |   Dicetak: ${exportTime}`],
+                [],
+                [
+                    'No',
+                    'NIP',
+                    'Nama Personel IT',
+                    'Jabatan / Spesialisasi',
+                    'Total Task',
+                    'To Do',
+                    'In Progress',
+                    'Done / Resolved',
+                    'Critical Aktif',
+                    'Rasio Selesai'
+                ]
+            ];
+
+            teamMembers.forEach((member, idx) => {
+                const mTasks = filteredTasks.filter(t => t.assigneeId === member.id);
+                const todoCnt = mTasks.filter(t => t.status === 'todo').length;
+                const progCnt = mTasks.filter(t => t.status === 'in_progress').length;
+                const doneCnt = mTasks.filter(t => t.status === 'done').length;
+                const critCnt = mTasks.filter(t => t.priority === 'critical' && t.status !== 'done').length;
+                const completionPct = mTasks.length > 0 ? `${Math.round((doneCnt / mTasks.length) * 100)}%` : '0%';
+
+                picRows.push([
+                    idx + 1,
+                    member.nip,
+                    member.name,
+                    member.title,
+                    mTasks.length,
+                    todoCnt,
+                    progCnt,
+                    doneCnt,
+                    critCnt,
+                    completionPct
+                ]);
+            });
+
+            const totalDoneAll = filteredTasks.filter(t => t.status === 'done').length;
+            const picTotalRowIdx = picRows.length;
+            picRows.push([
+                '',
+                '',
+                'TOTAL KESELURUHAN',
+                '',
+                filteredTasks.length,
+                filteredTasks.filter(t => t.status === 'todo').length,
+                filteredTasks.filter(t => t.status === 'in_progress').length,
+                totalDoneAll,
+                filteredTasks.filter(t => t.priority === 'critical' && t.status !== 'done').length,
+                filteredTasks.length > 0 ? `${Math.round((totalDoneAll / filteredTasks.length) * 100)}%` : '0%'
+            ]);
+
+            const wsPic = XLSX.utils.aoa_to_sheet(picRows);
+            wsPic['!merges'] = [
+                { s: { r: 0, c: 0 }, e: { r: 0, c: 9 } },
+                { s: { r: 1, c: 0 }, e: { r: 1, c: 9 } }
+            ];
+
+            for (let c = 0; c < 10; c++) {
+                const addr = XLSX.utils.encode_cell({ r: picTotalRowIdx, c });
+                if (wsPic[addr]) {
+                    wsPic[addr].s = {
+                        ...sTotalRow,
+                        alignment: { vertical: 'center', horizontal: c === 2 ? 'left' : 'center' }
+                    };
+                }
+            }
+
+            styleSheetGrid(wsPic, 10, 3, 4, picTotalRowIdx, {
+                0: 'center', 1: 'center', 2: 'left', 3: 'left', 4: 'center',
+                5: 'center', 6: 'center', 7: 'center', 8: 'center', 9: 'center'
+            }, { [picTotalRowIdx]: 25 });
+
+            wsPic['!cols'] = [
+                { wch: 6 },
+                { wch: 14 },
+                { wch: 24 },
+                { wch: 22 },
+                { wch: 13 },
+                { wch: 12 },
+                { wch: 14 },
+                { wch: 17 },
+                { wch: 15 },
+                { wch: 15 }
+            ];
+            XLSX.utils.book_append_sheet(wb, wsPic, 'Rekap Kinerja PIC');
+
+            // SHEET 3: REKAP PER PROJECT / BOARD
+            const boardRows = [
+                ['REKAPITULASI PROGRES PER PROJECT (BOARD)'],
+                [`Periode Laporan: ${periodText}   |   Cakupan: ${scopeText}   |   Dicetak: ${exportTime}`],
+                [],
+                [
+                    'Prefix',
+                    'Nama Project / Board',
+                    'Jumlah Sub-Project',
+                    'Total Task',
+                    'To Do',
+                    'In Progress',
+                    'Done / Resolved',
+                    'Progres Selesai'
+                ]
+            ];
+
+            const targetBoardKeys = boardScope === 'ALL' ? Object.keys(boards) : [boardScope];
+            targetBoardKeys.forEach(prefix => {
+                const bTasks = filteredTasks.filter(t => t.board === prefix);
+                const bSubsCount = subProjects.filter(sp => sp.board === prefix).length;
+                const doneB = bTasks.filter(t => t.status === 'done').length;
+                const pctB = bTasks.length > 0 ? `${Math.round((doneB / bTasks.length) * 100)}%` : '0%';
+
+                boardRows.push([
+                    prefix,
+                    boards[prefix] || prefix,
+                    bSubsCount,
+                    bTasks.length,
+                    bTasks.filter(t => t.status === 'todo').length,
+                    bTasks.filter(t => t.status === 'in_progress').length,
+                    doneB,
+                    pctB
+                ]);
+            });
+
+            const boardTotalRowIdx = boardRows.length;
+            boardRows.push([
+                'TOTAL',
+                `${targetBoardKeys.length} Project`,
+                subProjects.filter(sp => targetBoardKeys.includes(sp.board)).length,
+                filteredTasks.length,
+                filteredTasks.filter(t => t.status === 'todo').length,
+                filteredTasks.filter(t => t.status === 'in_progress').length,
+                totalDoneAll,
+                filteredTasks.length > 0 ? `${Math.round((totalDoneAll / filteredTasks.length) * 100)}%` : '0%'
+            ]);
+
+            const wsBoard = XLSX.utils.aoa_to_sheet(boardRows);
+            wsBoard['!merges'] = [
+                { s: { r: 0, c: 0 }, e: { r: 0, c: 7 } },
+                { s: { r: 1, c: 0 }, e: { r: 1, c: 7 } }
+            ];
+
+            for (let c = 0; c < 8; c++) {
+                const addr = XLSX.utils.encode_cell({ r: boardTotalRowIdx, c });
+                if (wsBoard[addr]) {
+                    wsBoard[addr].s = {
+                        ...sTotalRow,
+                        alignment: { vertical: 'center', horizontal: c === 1 ? 'left' : 'center' }
+                    };
+                }
+            }
+
+            styleSheetGrid(wsBoard, 8, 3, 4, boardTotalRowIdx, {
+                0: 'center', 1: 'left', 2: 'center', 3: 'center',
+                4: 'center', 5: 'center', 6: 'center', 7: 'center'
+            }, { [boardTotalRowIdx]: 25 });
+
+            wsBoard['!cols'] = [
+                { wch: 11 },
+                { wch: 32 },
+                { wch: 20 },
+                { wch: 13 },
+                { wch: 12 },
+                { wch: 14 },
+                { wch: 17 },
+                { wch: 16 }
+            ];
+            XLSX.utils.book_append_sheet(wb, wsBoard, 'Rekap Per Project');
+
+            const dateStamp = new Date().toISOString().slice(0, 10);
+            const periodTag = periodKey === 'all' ? 'Semua' : periodKey.toUpperCase();
+            const fileName = `Rekap_ITFlow_${periodTag}_${dateStamp}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+            showToast(`Laporan ${periodText} (${fileName}) berhasil diunduh!`, 'success');
+        }
+
+        // Initialize icons on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>

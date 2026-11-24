@@ -1,5 +1,5 @@
 @php
-    $reference = file_get_contents(base_path('_referensi_itflow/IT SNS(1).html'));
+    $reference = file_get_contents(base_path('docs/references/itflow-prototype.html'));
     $workspace = substr($reference, strpos($reference, '<!-- ==================== MAIN APP WORKSPACE'), strpos($reference, '<!-- ==================== JAVASCRIPT LOGIC') - strpos($reference, '<!-- ==================== MAIN APP WORKSPACE'));
     $prototypeScript = substr($reference, strpos($reference, '// Role-based PIC visibility helper:'), strpos($reference, '    </script>', strpos($reference, '// Role-based PIC visibility helper:')) - strpos($reference, '// Role-based PIC visibility helper:'));
     $prototypeScript = preg_replace('/        function quickFillAccount\(nip, pass\).*?        function applyAuthenticatedUserUI\(user\)/s', '        function applyAuthenticatedUserUI(user)', $prototypeScript);
@@ -20,6 +20,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('itflow/board.css') }}">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script>tailwind.config = {darkMode: 'class', theme: {extend: {fontFamily: {sans: ['Plus Jakarta Sans', 'sans-serif'], mono: ['JetBrains Mono', 'monospace']}, colors: {brand: {50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 900: '#1e3a8a', 950: '#172554'}}}}};</script>
     {!! $prototypeStyle !!}
@@ -236,6 +237,23 @@
         }
         html.dark #sidebarProjectTree button[onclick^="selectSidebarScope"][class*="bg-emerald-600"] { color: #ffffff !important; }
 
+        #sidebarProjectTree .sns-subproject-row { display: flex; align-items: center; gap: 2px; }
+        #sidebarProjectTree .sns-subproject-row > button:first-child { flex: 1; min-width: 0; }
+        #sidebarProjectTree .sns-sidebar-delete {
+            display: inline-grid; place-items: center; flex: 0 0 auto;
+            width: 22px; height: 22px; padding: 0; border-radius: 6px;
+            color: #94a3b8 !important; background: transparent !important;
+            font-size: 16px; line-height: 1;
+        }
+        #sidebarProjectTree .sns-sidebar-delete:hover,
+        #sidebarProjectTree .sns-sidebar-delete:focus-visible {
+            color: #be123c !important; background: #fff1f2 !important;
+        }
+        html.dark #sidebarProjectTree .sns-sidebar-delete:hover,
+        html.dark #sidebarProjectTree .sns-sidebar-delete:focus-visible {
+            color: #fda4af !important; background: #4c0519 !important;
+        }
+
         #appSidebar ::-webkit-scrollbar { width: 3px; }
         #appSidebar ::-webkit-scrollbar-track { background: transparent; }
         #appSidebar ::-webkit-scrollbar-thumb {
@@ -438,6 +456,11 @@
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans antialiased selection:bg-brand-500 selection:text-white">
     {!! $workspace !!}
+    <dialog id="boardConfirmDialog" class="board-modal board-confirm" aria-labelledby="boardConfirmTitle">
+        <header><h2 id="boardConfirmTitle"></h2><button type="button" data-modal-close aria-label="Tutup">×</button></header>
+        <div class="confirm-body"><p>Anda akan menghapus <strong data-confirm-name></strong>.</p><p class="confirm-impact" data-confirm-impact></p></div>
+        <div class="confirm-actions"><button type="button" data-modal-cancel>Batal</button><button type="button" class="danger" data-modal-confirm>Hapus</button></div>
+    </dialog>
     <form id="laravel-logout" method="post" action="{{ route('logout') }}" hidden>@csrf</form>
     <script>
         const itflowData = @json($prototypeData);

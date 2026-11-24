@@ -18,7 +18,9 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/board', ItFlowBoardController::class)->name('dashboard');
     Route::get('/board/api/meta', [ItFlowBoardApiController::class, 'meta'])->name('board.meta');
     Route::post('/board/api/projects', [ItFlowBoardApiController::class, 'project'])->name('board.projects.store');
+    Route::delete('/board/api/projects/{project}', [ItFlowBoardApiController::class, 'destroyProject'])->name('board.projects.destroy');
     Route::post('/board/api/sub-projects', [ItFlowBoardApiController::class, 'subProject'])->name('board.sub-projects.store');
+    Route::delete('/board/api/sub-projects/{subProject}', [ItFlowBoardApiController::class, 'destroySubProject'])->name('board.sub-projects.destroy');
     Route::post('/board/api/tasks', [ItFlowBoardApiController::class, 'storeTask'])->name('board.tasks.store');
     Route::get('/board/api/tasks/{task}', [ItFlowBoardApiController::class, 'showTask'])->name('board.tasks.show');
     Route::patch('/board/api/tasks/{task}', [ItFlowBoardApiController::class, 'updateTask'])->name('board.tasks.update');

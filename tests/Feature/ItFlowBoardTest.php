@@ -66,4 +66,67 @@ class ItFlowBoardTest extends TestCase
         $workbook = \PhpOffice\PhpSpreadsheet\IOFactory::load($path);
         $this->assertSame(['Rekap Detail Task', 'Rekap Kinerja PIC', 'Rekap Per Project'], $workbook->getSheetNames());
     }
+
+    public function test_general_task_survives_board_reload_edit_and_excel(): void
+    {
+        $atl = $this->user('atl', '0000000005');
+        $project = $this->actingAs($atl)->postJson('/board/api/projects', ['name' => 'General Board', 'prefix' => 'GEN'])->assertCreated()->json();
+        $task = $this->postJson('/board/api/tasks', ['project_id' => $project['id'], 'sub_project_id' => null,
+            'title' => 'General task', 'status' => 'todo', 'category' => 'maintenance', 'priority' => 'high',
+            'assignee_id' => $atl->id])->assertCreated()->assertJsonPath('sub_project_id', null)->json();
+
+        $this->get('/board')->assertOk()->assertSee('General task');
+        $this->patchJson('/board/api/tasks/'.$task['id'], ['title' => 'Edited general task', 'status' => 'in_progress',
+            'sub_project_id' => null, 'category' => 'maintenance', 'priority' => 'high', 'assignee_id' => $atl->id,
+            'subtasks' => []])->assertOk()->assertJsonPath('sub_project_id', null);
+        $this->get('/board')->assertOk()->assertSee('Edited general task');
+
+        $response = $this->get('/board/api/export?period=all');
+        $response->assertOk()->assertDownload();
+        $workbook = \PhpOffice\PhpSpreadsheet\IOFactory::load($response->baseResponse->getFile()->getPathname());
+        $rows = $workbook->getSheetByName('Rekap Detail Task')->rangeToArray('A1:N10');
+        $this->deleteJson('/board/api/tasks/'.$task['id'])->assertOk();
+        $this->assertContains('Umum / Tanpa Sub-Project', array_merge(...$rows), json_encode($rows));
+    }
+
+    public function test_deletion_checks_all_tasks_including_invisible_tasks(): void
+    {
+        $atl = $this->user('atl', '0000000006');
+        $staff = $this->user('it_staff', '0000000007');
+        $project = $this->actingAs($atl)->postJson('/board/api/projects', ['name' => 'Shared', 'prefix' => 'SHR',
+            'sub_projects' => ['Used', 'Empty']])->assertCreated()->json();
+        $used = DB::table('sub_projects')->where('project_id', $project['id'])->where('name', 'Used')->first();
+        $empty = DB::table('sub_projects')->where('project_id', $project['id'])->where('name', 'Empty')->first();
+        $task = $this->postJson('/board/api/tasks', ['project_id' => $project['id'], 'sub_project_id' => $used->id,
+            'title' => 'Hidden from staff', 'status' => 'todo', 'category' => 'maintenance', 'priority' => 'high',
+            'assignee_id' => $atl->id])->assertCreated()->json();
+
+        $this->actingAs($staff)->deleteJson('/board/api/sub-projects/'.$used->id)->assertStatus(409)
+            ->assertJsonPath('message', 'Sub-project tidak dapat dihapus karena masih memiliki task.');
+        $this->deleteJson('/board/api/projects/'.$project['id'])->assertStatus(409);
+        $this->deleteJson('/board/api/sub-projects/'.$empty->id)->assertOk();
+        $this->assertDatabaseHas('tasks', ['id' => $task['id'], 'sub_project_id' => $used->id]);
+
+        $this->actingAs($atl)->deleteJson('/board/api/tasks/'.$task['id'])->assertOk();
+        $this->actingAs($staff)->deleteJson('/board/api/sub-projects/'.$used->id)->assertOk();
+        $this->deleteJson('/board/api/projects/'.$project['id'])->assertOk();
+        $this->assertDatabaseMissing('projects', ['id' => $project['id']]);
+    }
+
+    public function test_general_task_blocks_project_deletion_after_sub_project_is_removed(): void
+    {
+        $atl = $this->user('atl', '0000000008');
+        $tl = $this->user('tl', '0000000009');
+        $project = $this->actingAs($atl)->postJson('/board/api/projects', ['name' => 'Shared General', 'prefix' => 'SGN',
+            'sub_projects' => ['Empty']])->assertCreated()->json();
+        $sub = DB::table('sub_projects')->where('project_id', $project['id'])->first();
+        $task = $this->postJson('/board/api/tasks', ['project_id' => $project['id'], 'sub_project_id' => null,
+            'title' => 'Invisible general task', 'status' => 'todo', 'category' => 'maintenance',
+            'priority' => 'high', 'assignee_id' => $atl->id])->assertCreated()->json();
+
+        $this->actingAs($tl)->deleteJson('/board/api/sub-projects/'.$sub->id)->assertOk();
+        $this->deleteJson('/board/api/projects/'.$project['id'])->assertStatus(409)
+            ->assertJsonPath('message', 'Project tidak dapat dihapus karena masih memiliki task.');
+        $this->actingAs($atl)->deleteJson('/board/api/tasks/'.$task['id'])->assertOk();
+    }
 }

@@ -70,17 +70,42 @@ class ItFlowBoardApiController extends Controller
         return response()->json(DB::table('sub_projects')->find($id), 201);
     }
 
+    public function destroyProject(int $project): JsonResponse
+    {
+        return DB::transaction(function () use ($project): JsonResponse {
+            $item = DB::table('projects')->where('id', $project)->lockForUpdate()->first();
+            abort_unless($item, 404);
+            abort_if(DB::table('tasks')->where('project_id', $project)->exists(), 409, 'Project tidak dapat dihapus karena masih memiliki task.');
+            abort_if(DB::table('sub_projects')->where('project_id', $project)->exists(), 409, 'Project tidak dapat dihapus karena masih memiliki sub-project.');
+            DB::table('projects')->where('id', $project)->delete();
+
+            return response()->json(['deleted' => true]);
+        });
+    }
+
+    public function destroySubProject(int $subProject): JsonResponse
+    {
+        return DB::transaction(function () use ($subProject): JsonResponse {
+            $item = DB::table('sub_projects')->where('id', $subProject)->lockForUpdate()->first();
+            abort_unless($item, 404);
+            abort_if(DB::table('tasks')->where('sub_project_id', $subProject)->exists(), 409, 'Sub-project tidak dapat dihapus karena masih memiliki task.');
+            DB::table('sub_projects')->where('id', $subProject)->delete();
+
+            return response()->json(['deleted' => true]);
+        });
+    }
+
     public function storeTask(Request $request): JsonResponse
     {
         $user = $request->user();
         $data = $request->validate([
-            'project_id' => ['required','integer','exists:projects,id'], 'sub_project_id' => ['required','integer','exists:sub_projects,id'],
+            'project_id' => ['required','integer','exists:projects,id'], 'sub_project_id' => ['nullable','integer','exists:sub_projects,id'],
             'title' => ['required','string','max:255'], 'description' => ['nullable','string'],
             'status' => ['required', Rule::in(['todo','in_progress','done'])], 'category' => ['required', Rule::in(['maintenance','development'])],
             'priority' => ['required', Rule::in(['low','high','critical','basic','great','epic'])],
             'assignee_id' => ['required','integer'], 'due_date' => ['nullable','date'], 'subtasks' => ['nullable','array'], 'subtasks.*' => ['string','max:255'],
         ]);
-        $this->validatePair($data['project_id'], $data['sub_project_id'], $data['category'], $data['priority']);
+        $this->validatePair($data['project_id'], $data['sub_project_id'] ?? null, $data['category'], $data['priority']);
         abort_unless(Task::allowedAssignees($user)->whereKey($data['assignee_id'])->exists(), 403);
         if ($user->role === 'it_staff') $data['assignee_id'] = $user->id;
         $task = DB::transaction(function () use ($data, $user) {
@@ -88,7 +113,7 @@ class ItFlowBoardApiController extends Controller
             $number = $project->next_task_number;
             DB::table('projects')->where('id', $project->id)->update(['next_task_number' => $number + 1, 'updated_at' => now()]);
             $taskId = DB::table('tasks')->insertGetId([
-                'project_id'=>$project->id,'sub_project_id'=>$data['sub_project_id'],'assignee_id'=>$data['assignee_id'],'reporter_id'=>$user->id,
+                'project_id'=>$project->id,'sub_project_id'=>$data['sub_project_id'] ?? null,'assignee_id'=>$data['assignee_id'],'reporter_id'=>$user->id,
                 'code'=>$project->prefix.'-'.$number,'title'=>$data['title'],'description'=>$data['description'] ?? null,'status'=>$data['status'],
                 'category'=>$data['category'],'priority'=>$data['priority'],'due_date'=>$data['due_date'] ?? null,'created_at'=>now(),'updated_at'=>now(),
             ]);
@@ -103,7 +128,7 @@ class ItFlowBoardApiController extends Controller
     public function updateTask(Request $request, int $task): JsonResponse
     {
         $model = $this->allowedTask($request, $task); $user = $request->user();
-        $data = $request->validate(['title'=>['required','string','max:255'],'description'=>['nullable','string'],'status'=>[Rule::in(['todo','in_progress','done'])], 'sub_project_id'=>['required','integer','exists:sub_projects,id'],'category'=>[Rule::in(['maintenance','development'])], 'priority'=>[Rule::in(['low','high','critical','basic','great','epic'])], 'assignee_id'=>['required','integer'],'due_date'=>['nullable','date'],'subtasks'=>['nullable','array'],'subtasks.*.id'=>['nullable','integer'],'subtasks.*.title'=>['required','string','max:255'],'subtasks.*.done'=>['boolean'],'comment'=>['nullable','string','max:5000']]);
+        $data = $request->validate(['title'=>['required','string','max:255'],'description'=>['nullable','string'],'status'=>[Rule::in(['todo','in_progress','done'])], 'sub_project_id'=>['present','nullable','integer','exists:sub_projects,id'],'category'=>[Rule::in(['maintenance','development'])], 'priority'=>[Rule::in(['low','high','critical','basic','great','epic'])], 'assignee_id'=>['required','integer'],'due_date'=>['nullable','date'],'subtasks'=>['nullable','array'],'subtasks.*.id'=>['nullable','integer'],'subtasks.*.title'=>['required','string','max:255'],'subtasks.*.done'=>['boolean'],'comment'=>['nullable','string','max:5000']]);
         $this->validatePair($model->project_id, $data['sub_project_id'], $data['category'], $data['priority']);
         abort_unless(Task::allowedAssignees($user)->whereKey($data['assignee_id'])->exists(), 403);
         if ($user->role === 'it_staff') $data['assignee_id'] = $user->id;
@@ -134,9 +159,11 @@ class ItFlowBoardApiController extends Controller
 
     public function destroyTask(Request $request, int $task): JsonResponse { $model = $this->allowedTask($request, $task); $model->delete(); return response()->json(['deleted'=>true]); }
 
-    private function validatePair(int $projectId, int $subProjectId, string $category, string $priority): void
+    private function validatePair(int $projectId, ?int $subProjectId, string $category, string $priority): void
     {
-        abort_unless(DB::table('sub_projects')->where('id',$subProjectId)->where('project_id',$projectId)->exists(), 422, 'Sub-project tidak sesuai project.');
+        if ($subProjectId !== null) {
+            abort_unless(DB::table('sub_projects')->where('id',$subProjectId)->where('project_id',$projectId)->exists(), 422, 'Sub-project tidak sesuai project.');
+        }
         $valid = $category === 'maintenance' ? ['low','high','critical'] : ['basic','great','epic']; abort_unless(in_array($priority, $valid, true), 422, 'Level tidak sesuai kategori.');
     }
 }
