@@ -455,136 +455,529 @@
     </style>
 
     {{-- ================================================================
-         POLISH LAYER — efek tipis & animasi ringan
+         SNS FLUENT LAYER — glass/mica, reveal highlight, aurora, motion
          Ditaruh setelah tema di atas, jadi hanya menimpa/menambah.
+         Hapus blok <style id="sns-fluent"> + 2 script di bawah untuk kembali ke tampilan awal.
     ================================================================= --}}
-    <style id="sns-polish">
+    <script>
+        document.documentElement.classList.add('sns-boot');
+        setTimeout(function () { document.documentElement.classList.remove('sns-boot'); }, 1800);
+    </script>
+    <style id="sns-fluent">
+        /* ═══ 1. TOKEN: permukaan kaca (acrylic) ═══ */
         :root {
             --sns-ease: cubic-bezier(.2, .8, .2, 1);
-            --sns-card-shadow: 0 1px 2px rgba(15, 23, 42, .05), 0 1px 3px rgba(15, 23, 42, .04), inset 0 1px 0 rgba(255, 255, 255, .9);
-            --sns-card-shadow-hover: 0 12px 24px -10px rgba(37, 99, 235, .25), 0 3px 6px -2px rgba(15, 23, 42, .06), inset 0 1px 0 rgba(255, 255, 255, .9);
+            --sns-spring: cubic-bezier(.34, 1.56, .64, 1);
+            --sns-header-bg: rgba(255, 255, 255, .72);
+            --sns-toolbar-bg: rgba(255, 255, 255, .6);
+            --sns-col-bg: rgba(241, 245, 249, .62);
+            --sns-col-border: rgba(203, 213, 225, .75);
+            --sns-card-shadow: 0 1px 2px rgba(15, 23, 42, .05), 0 2px 6px -2px rgba(15, 23, 42, .06), inset 0 1px 0 rgba(255, 255, 255, .95);
+            --sns-card-shadow-hover: 0 18px 32px -14px rgba(37, 99, 235, .38), 0 4px 10px -4px rgba(15, 23, 42, .1), inset 0 1px 0 rgba(255, 255, 255, .95);
+            --sns-spot: rgba(59, 130, 246, .16);
         }
         html.dark {
-            --sns-card-shadow: 0 1px 3px rgba(0, 0, 0, .3), inset 0 1px 0 rgba(255, 255, 255, .04);
-            --sns-card-shadow-hover: 0 12px 24px -8px rgba(0, 0, 0, .55), 0 0 0 1px rgba(59, 130, 246, .25), inset 0 1px 0 rgba(255, 255, 255, .06);
+            --sns-header-bg: rgba(15, 23, 42, .68);
+            --sns-toolbar-bg: rgba(15, 23, 42, .55);
+            --sns-col-bg: rgba(15, 23, 42, .58);
+            --sns-col-border: rgba(51, 65, 85, .6);
+            --sns-card-shadow: 0 1px 3px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .05);
+            --sns-card-shadow-hover: 0 18px 34px -12px rgba(0, 0, 0, .65), 0 0 0 1px rgba(96, 165, 250, .35), 0 0 28px -6px rgba(59, 130, 246, .35), inset 0 1px 0 rgba(255, 255, 255, .07);
+            --sns-spot: rgba(96, 165, 250, .2);
         }
 
-        /* Atmosfer latar: cahaya biru tipis di pojok */
+        /* ═══ 2. LATAR: aurora bergerak + grid titik yang "menyala" di dekat kursor ═══ */
         #mainAppContainer,
-        .flex-1.flex.flex-col.min-w-0 {
-            background-image:
-                radial-gradient(820px 340px at 92% -90px, rgba(59, 130, 246, .07), transparent 70%),
-                radial-gradient(640px 320px at 0% 105%, rgba(99, 102, 241, .05), transparent 70%);
+        .flex-1.flex.flex-col.min-w-0 { background-color: transparent !important; }
+        html { scroll-behavior: smooth; }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: -25%;
+            z-index: -2;
+            pointer-events: none;
+            background:
+                radial-gradient(40% 36% at 18% 24%, rgba(59, 130, 246, .17), transparent 70%),
+                radial-gradient(34% 34% at 82% 18%, rgba(139, 92, 246, .13), transparent 70%),
+                radial-gradient(40% 40% at 64% 86%, rgba(6, 182, 212, .12), transparent 70%);
+            animation: sns-aurora 30s ease-in-out infinite alternate;
+            will-change: transform;
+        }
+        html.dark body::before {
+            background:
+                radial-gradient(40% 36% at 18% 24%, rgba(37, 99, 235, .26), transparent 70%),
+                radial-gradient(34% 34% at 82% 18%, rgba(124, 58, 237, .2), transparent 70%),
+                radial-gradient(40% 40% at 64% 86%, rgba(8, 145, 178, .16), transparent 70%);
+        }
+        @keyframes sns-aurora { to { transform: translate3d(4%, 3%, 0) rotate(6deg) scale(1.08); } }
+
+        body::after {   /* aura mengikuti kursor */
+            content: "";
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+            background: radial-gradient(560px circle at var(--px, 72%) var(--py, 8%), rgba(59, 130, 246, .09), transparent 65%);
+        }
+        html::before {  /* grid titik, hanya terlihat di sekitar kursor */
+            content: "";
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+            background-image: radial-gradient(circle, rgba(71, 85, 105, .35) 1px, transparent 1.6px);
+            background-size: 24px 24px;
+            -webkit-mask-image: radial-gradient(380px circle at var(--px, 72%) var(--py, 8%), #000, transparent 70%);
+            mask-image: radial-gradient(380px circle at var(--px, 72%) var(--py, 8%), #000, transparent 70%);
+            opacity: .55;
+        }
+        html.dark::before { background-image: radial-gradient(circle, rgba(148, 163, 184, .4) 1px, transparent 1.6px); }
+
+        /* ═══ 3. HEADER & TOOLBAR: kaca + garis cahaya bergerak ═══ */
+        header.h-14 { backdrop-filter: blur(16px) saturate(1.5); -webkit-backdrop-filter: blur(16px) saturate(1.5); }
+        header.h-14:not(.sticky):not(.fixed):not(.absolute):not(.relative) { position: relative; }
+        header.h-14::after {
+            content: "";
+            position: absolute;
+            left: 0; right: 0; bottom: -1px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #3b82f6, #8b5cf6, #06b6d4, transparent);
+            background-size: 220% 100%;
+            opacity: .75;
+            pointer-events: none;
+            animation: sns-flow 7s linear infinite;
+        }
+        @keyframes sns-flow { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+
+        div[class*="bg-white/80"][class*="border-b"],
+        div[class*="dark:bg-slate-900/80"][class*="border-b"] { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+
+        #searchInput { transition: border-color .2s, box-shadow .25s, background-color .2s, scale .25s var(--sns-ease) !important; }
+        #searchInput:focus { scale: 1.015; box-shadow: 0 0 0 4px rgba(59, 130, 246, .16), 0 10px 24px -12px rgba(59, 130, 246, .5) !important; }
+
+        div[class*="bg-slate-100"][class*="p-1"][class*="rounded-xl"] { backdrop-filter: blur(8px); box-shadow: inset 0 1px 2px rgba(15, 23, 42, .05); }
+        div[class*="bg-slate-100"][class*="p-1"][class*="rounded-xl"] button { transition: all .2s var(--sns-ease); }
+
+        /* Tombol: efek tekan + kilau lewat saat hover */
+        header button, main button { transition: scale .14s var(--sns-ease), background-color .2s, box-shadow .25s, border-color .2s, color .2s; }
+        header button:active, main button:active { scale: .96; }
+        header button[class*="bg-brand-"], main button[class*="bg-brand-"] {
+            background-image: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, .38) 50%, transparent 65%);
+            background-size: 260% 100%;
+            background-position: 130% 0;
             background-repeat: no-repeat;
+            transition: background-position .75s var(--sns-ease), scale .14s var(--sns-ease), box-shadow .25s;
         }
-        html.dark #mainAppContainer,
-        html.dark .flex-1.flex.flex-col.min-w-0 {
-            background-image:
-                radial-gradient(820px 340px at 92% -90px, rgba(59, 130, 246, .11), transparent 70%),
-                radial-gradient(640px 320px at 0% 105%, rgba(99, 102, 241, .08), transparent 70%);
-        }
-
-        /* Header: garis bawah dengan glow biru sangat tipis */
-        header.h-14 {
-            box-shadow: 0 1px 0 var(--sns-header-border), 0 8px 20px -14px rgba(37, 99, 235, .28) !important;
+        header button[class*="bg-brand-"]:hover, main button[class*="bg-brand-"]:hover {
+            background-position: -30% 0;
+            box-shadow: 0 10px 22px -8px rgba(37, 99, 235, .6);
         }
 
-        /* Sidebar */
-        #navAllBoardsBtn svg:first-child { transition: transform .2s var(--sns-ease); }
-        #navAllBoardsBtn:hover svg:first-child { transform: translateX(2px) scale(1.06); }
-        #sidebarProjectTree [onclick^="selectSidebarScope"]:not([class*="bg-brand-600"]):hover {
-            transform: translateX(2px);
+        /* ═══ 4. SIDEBAR: gradien, logo hidup, item aktif menyala, reveal highlight ═══ */
+        #appSidebar { background-image: linear-gradient(180deg, rgba(59, 130, 246, .07), transparent 260px); }
+        html.dark #appSidebar { background-image: linear-gradient(180deg, rgba(59, 130, 246, .12), transparent 280px); }
+
+        #appSidebar .h-14 img { transition: rotate .45s var(--sns-spring), scale .45s var(--sns-spring); filter: drop-shadow(0 3px 6px rgba(37, 99, 235, .28)); }
+        #appSidebar .h-14:hover img { rotate: -8deg; scale: 1.1; }
+        @supports (background-clip: text) or (-webkit-background-clip: text) {
+            #appSidebar .font-bold.text-base {
+                background: linear-gradient(90deg, #0f172a, #2563eb 70%);
+                -webkit-background-clip: text; background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }
+            html.dark #appSidebar .font-bold.text-base { background-image: linear-gradient(90deg, #fff, #93c5fd 75%); }
         }
+
+        #navAllBoardsBtn.active-scope,
+        #navAllBoardsBtn[class*="bg-brand-600"],
+        #sidebarProjectTree [onclick^="selectSidebarScope"][class*="bg-brand-600"] {
+            background-image: linear-gradient(135deg, #3b82f6, #2563eb 55%, #4f46e5) !important;
+            box-shadow: 0 8px 18px -6px rgba(37, 99, 235, .6), inset 0 1px 0 rgba(255, 255, 255, .28) !important;
+        }
+
+        /* Reveal highlight (Fluent): lingkaran cahaya mengikuti kursor di item */
+        #navAllBoardsBtn:not(.active-scope):not([class*="bg-brand-600"]):hover,
+        #sidebarProjectTree [onclick^="selectSidebarScope"]:not([class*="bg-brand-600"]):hover,
         #appSidebar button[onclick="openNewBoardModal()"]:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 10px -4px rgba(79, 70, 229, .35) !important;
+            background-image: radial-gradient(130px circle at var(--mx, 50%) var(--my, 50%), var(--sns-spot), transparent 75%) !important;
         }
-        #appSidebar button[onclick="openNewBoardModal()"]:active { transform: translateY(0) scale(.98); }
+        #navAllBoardsBtn svg:first-child { transition: transform .25s var(--sns-spring); }
+        #navAllBoardsBtn:hover svg:first-child { transform: translateX(2px) scale(1.12) rotate(-4deg); }
+        #sidebarProjectTree [onclick^="selectSidebarScope"]:not([class*="bg-brand-600"]):hover { transform: translateX(3px); }
+        #appSidebar button[onclick="openNewBoardModal()"]:hover { transform: translateY(-1px); box-shadow: 0 6px 14px -6px rgba(79, 70, 229, .45) !important; }
 
-        /* Kolom: garis aksen status di atas + hover halus */
+        /* ═══ 5. KOLOM: kaca, aksen status bercahaya, highlight saat drag ═══ */
         main .grid > div[class*="rounded-2xl"] {
+            --col-accent: #94a3b8;
             position: relative;
-            transition: border-color .2s ease, box-shadow .2s ease !important;
+            backdrop-filter: blur(14px) saturate(1.35);
+            -webkit-backdrop-filter: blur(14px) saturate(1.35);
+            transition: border-color .25s, box-shadow .3s, background-color .25s !important;
         }
-        main .grid > div[class*="rounded-2xl"]:hover {
-            border-color: var(--sns-card-border-hover) !important;
-            box-shadow: 0 10px 26px -16px rgba(15, 23, 42, .22) !important;
-        }
+        main .grid > div[class*="rounded-2xl"]:hover { box-shadow: 0 14px 34px -18px rgba(15, 23, 42, .3) !important; }
+        div:has(> div > #col-in_progress) { --col-accent: #3b82f6 !important; }
+        div:has(> div > #col-done)        { --col-accent: #10b981 !important; }
         main .grid > div[class*="rounded-2xl"]::before {
             content: "";
             position: absolute;
-            top: -1px; left: 18px; right: 18px;
-            height: 2px;
-            border-radius: 0 0 3px 3px;
-            background: #94a3b8;
-            opacity: .85;
+            top: -1px; left: 14px; right: 14px;
+            height: 3px;
+            border-radius: 0 0 4px 4px;
+            background: linear-gradient(90deg, transparent, var(--col-accent), transparent);
+            box-shadow: 0 3px 16px var(--col-accent);
+            opacity: .9;
             pointer-events: none;
+            background: linear-gradient(90deg, transparent, var(--col-accent), transparent) !important;
         }
-        div:has(> div > #col-in_progress)::before { background: linear-gradient(90deg, #60a5fa, #3b82f6) !important; }
-        div:has(> div > #col-done)::before        { background: linear-gradient(90deg, #34d399, #10b981) !important; }
+        /* kolom tujuan menyala saat kartu diseret ke atasnya */
+        main .grid > div[class*="rounded-2xl"]:has(.sortable-ghost) {
+            border-color: color-mix(in srgb, var(--col-accent) 65%, transparent) !important;
+            background-color: color-mix(in srgb, var(--col-accent) 8%, var(--sns-col-bg)) !important;
+            box-shadow: 0 0 0 4px color-mix(in srgb, var(--col-accent) 14%, transparent), 0 24px 44px -22px var(--col-accent) !important;
+        }
 
-        /* Titik status "In Progress" berdenyut pelan */
-        div:has(> div > #col-in_progress) span.w-2\.5 { position: relative; }
+        main .grid > div[class*="rounded-2xl"] h2 { transition: letter-spacing .3s var(--sns-ease); }
+        main .grid > div[class*="rounded-2xl"]:hover h2 { letter-spacing: .08em !important; }
+
+        div:has(> div > #col-in_progress) span.w-2\.5,
+        div:has(> div > #col-todo) span.w-2\.5,
+        div:has(> div > #col-done) span.w-2\.5 { position: relative; }
         div:has(> div > #col-in_progress) span.w-2\.5::after {
-            content: "";
-            position: absolute;
-            inset: 0;
-            border-radius: inherit;
-            background: #3b82f6;
-            animation: sns-ping 2.4s ease-out infinite;
-            pointer-events: none;
+            content: ""; position: absolute; inset: 0; border-radius: inherit; background: #3b82f6;
+            animation: sns-ping 2.4s ease-out infinite; pointer-events: none;
         }
-        @keyframes sns-ping {
-            0%        { transform: scale(1);   opacity: .55; }
-            70%, 100% { transform: scale(2.8); opacity: 0; }
-        }
+        @keyframes sns-ping { 0% { transform: scale(1); opacity: .6; } 70%, 100% { transform: scale(3); opacity: 0; } }
 
-        [id^="count-"] { font-variant-numeric: tabular-nums; transition: background-color .2s ease, color .2s ease; }
+        [id^="count-"] { font-variant-numeric: tabular-nums; display: inline-block; }
+        [id^="count-"].sns-bump { animation: sns-bump .45s var(--sns-spring); }
+        @keyframes sns-bump { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: scale(1); } }
 
-        /* Kartu tugas: aksen kiri muncul saat hover + muncul bertahap */
-        .kanban-task-card { position: relative; }
+        /* ═══ 6. KARTU TUGAS: reveal, aksen, kedalaman, tint status ═══ */
+        .kanban-task-card { position: relative; transition: transform .25s var(--sns-ease), box-shadow .3s, border-color .2s !important; }
+        .kanban-task-card:hover { transform: translateY(-4px) !important; }
+        .kanban-task-card:active { transform: translateY(-1px) scale(.985) !important; }
         .kanban-task-card::before {
-            content: "";
-            position: absolute;
-            left: -1px; top: 12px; bottom: 12px;
-            width: 3px;
-            border-radius: 0 3px 3px 0;
-            background: linear-gradient(180deg, #60a5fa, #2563eb);
-            opacity: 0;
-            transform: scaleY(.3);
-            transition: transform .24s var(--sns-ease), opacity .18s ease;
-            pointer-events: none;
+            content: ""; position: absolute; left: -1px; top: 12px; bottom: 12px; width: 4px;
+            border-radius: 0 4px 4px 0;
+            background: linear-gradient(180deg, #60a5fa, #6366f1);
+            box-shadow: 0 0 12px rgba(96, 165, 250, .7);
+            opacity: 0; transform: scaleY(.2);
+            transition: transform .3s var(--sns-spring), opacity .2s; pointer-events: none;
         }
         .kanban-task-card:hover::before { opacity: 1; transform: scaleY(1); }
-        .sortable-ghost .kanban-task-card::before,
-        .sortable-drag .kanban-task-card::before { opacity: 0; }
-
-        @keyframes sns-rise { from { opacity: 0; transform: translateY(8px); } }
-        .kanban-task-card.sns-in {
-            animation: sns-rise .38s var(--sns-ease) backwards;
-            animation-delay: calc(var(--i, 0) * 35ms);
+        .kanban-task-card::after {   /* reveal highlight */
+            content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+            background: radial-gradient(190px circle at var(--mx, 50%) var(--my, 50%), var(--sns-spot), transparent 72%);
+            opacity: 0; transition: opacity .3s;
         }
+        .kanban-task-card:hover::after { opacity: 1; }
+        #col-in_progress .kanban-task-card { background-image: linear-gradient(135deg, rgba(59, 130, 246, .06), transparent 45%); }
+        #col-done .kanban-task-card { background-image: linear-gradient(135deg, rgba(16, 185, 129, .08), transparent 45%); }
 
-        /* Modal: fade + pop singkat saat dibuka */
+        .sortable-chosen .kanban-task-card { box-shadow: 0 0 0 2px rgba(59, 130, 246, .5) !important; }
+        .sortable-drag .kanban-task-card {
+            box-shadow: 0 28px 50px -12px rgba(0, 0, 0, .35), 0 0 36px -4px rgba(59, 130, 246, .55) !important;
+        }
+        .sortable-ghost .kanban-task-card { animation: sns-ghost 1.2s ease-in-out infinite alternate; }
+        .sortable-ghost .kanban-task-card::before, .sortable-ghost .kanban-task-card::after,
+        .sortable-drag .kanban-task-card::before { opacity: 0 !important; }
+        @keyframes sns-ghost { to { border-color: rgba(99, 102, 241, .9); } }
+
+        @keyframes sns-rise {
+            from { opacity: 0; translate: 0 14px; scale: .97; filter: blur(4px); }
+        }
+        .kanban-task-card.sns-in { animation: sns-rise .5s var(--sns-ease) backwards; animation-delay: calc(var(--i, 0) * 45ms); }
+
+        /* ═══ 7. MODAL: kaca + pop dengan pegas ═══ */
         @keyframes sns-fade { from { opacity: 0; } }
-        @keyframes sns-pop  { from { opacity: 0; transform: translateY(10px) scale(.97); } }
-        [class*="fixed"][class*="inset-0"][class*="bg-black"] { animation: sns-fade .18s ease backwards; }
+        @keyframes sns-pop  { from { opacity: 0; translate: 0 18px; scale: .94; } }
+        [class*="fixed"][class*="inset-0"][class*="bg-black"] { backdrop-filter: blur(8px) saturate(1.2) !important; animation: sns-fade .2s ease backwards; }
         [class*="bg-white"][class*="rounded-2xl"][class*="shadow-2xl"],
         html.dark [class*="bg-slate-900"][class*="rounded-2xl"][class*="shadow-2xl"] {
-            animation: sns-pop .24s var(--sns-ease) backwards;
+            animation: sns-pop .38s var(--sns-spring) backwards;
+            background-image: linear-gradient(180deg, rgba(59, 130, 246, .07), transparent 140px);
         }
-        dialog.board-modal[open] { animation: sns-pop .22s var(--sns-ease) backwards; }
-        dialog.board-modal[open]::backdrop { animation: sns-fade .2s ease backwards; }
+        dialog.board-modal[open] { animation: sns-pop .34s var(--sns-spring) backwards; }
+        dialog.board-modal[open]::backdrop { backdrop-filter: blur(8px); animation: sns-fade .2s ease backwards; }
+        [data-modal-close] { transition: rotate .3s var(--sns-spring), background-color .2s; }
+        [data-modal-close]:hover { rotate: 90deg; }
+
+        :is(input, select, textarea) { transition: border-color .2s, box-shadow .25s, background-color .2s; }
+        :is(input, select, textarea):focus { box-shadow: 0 0 0 4px rgba(59, 130, 246, .15); }
+
+        /* ═══ 8. ANIMASI MASUK HALAMAN (sekali saat dibuka) ═══ */
+        @keyframes sns-slide-x { from { opacity: 0; translate: -16px 0; } }
+        @keyframes sns-drop    { from { opacity: 0; translate: 0 -12px; } }
+        .sns-boot #appSidebar { animation: sns-slide-x .6s var(--sns-ease) backwards; }
+        .sns-boot header.h-14 { animation: sns-drop .6s var(--sns-ease) .08s backwards; }
+        .sns-boot main .grid > div[class*="rounded-2xl"] { animation: sns-rise .7s var(--sns-ease) backwards; }
+        .sns-boot main .grid > div:nth-child(1) { animation-delay: .15s; }
+        .sns-boot main .grid > div:nth-child(2) { animation-delay: .26s; }
+        .sns-boot main .grid > div:nth-child(3) { animation-delay: .37s; }
+        .sns-boot main .grid > div:nth-child(4) { animation-delay: .48s; }
+        .sns-boot .kanban-task-card.sns-in { animation-delay: calc(.4s + var(--i, 0) * 45ms); }
+
+        /* Transisi halus saat ganti light/dark */
+        html.sns-theme-fade *, html.sns-theme-fade *::before, html.sns-theme-fade *::after {
+            transition: background-color .4s, border-color .4s, color .3s, box-shadow .4s !important;
+        }
 
         @media (prefers-reduced-motion: reduce) {
-            .kanban-task-card.sns-in,
-            [class*="fixed"][class*="inset-0"][class*="bg-black"],
-            [class*="bg-white"][class*="rounded-2xl"][class*="shadow-2xl"],
-            html.dark [class*="bg-slate-900"][class*="rounded-2xl"][class*="shadow-2xl"],
-            dialog.board-modal[open],
-            dialog.board-modal[open]::backdrop,
-            div:has(> div > #col-in_progress) span.w-2\.5::after { animation: none !important; }
-            .kanban-task-card, .kanban-task-card::before { transition: none !important; }
+            *, *::before, *::after { animation: none !important; }
+            .kanban-task-card, header button, main button { transition: none !important; }
+            html { scroll-behavior: auto; }
+        }
+    </style>
+
+    {{-- ================================================================
+         SNS CHROME — penyempurnaan sidebar & navbar (menimpa Fluent layer di atasnya)
+    ================================================================= --}}
+    <style id="sns-chrome">
+        /* ═══ NAVBAR ═══ */
+        #appSidebar .h-14, header.h-14 { height: 64px !important; }   /* sejajar & lebih lega */
+        header.h-14 {
+            padding-inline: 1.25rem;
+            box-shadow: 0 1px 0 var(--sns-header-border), 0 14px 34px -22px rgba(37, 99, 235, .5) !important;
+            transition: box-shadow .3s ease;
+        }
+        html.sns-scrolled header.h-14 { box-shadow: 0 1px 0 var(--sns-header-border), 0 18px 36px -16px rgba(15, 23, 42, .3) !important; }
+
+        header.h-14::before {   /* kilau halus lewat tiap beberapa detik */
+            content: "";
+            position: absolute; inset: 0;
+            pointer-events: none;
+            background: linear-gradient(105deg, transparent 40%, rgba(96, 165, 250, .16) 50%, transparent 60%);
+            background-size: 300% 100%;
+            background-position: 150% 0;
+            animation: sns-sheen 10s ease-in-out infinite;
+        }
+        @keyframes sns-sheen { 0%, 62% { background-position: 150% 0; } 100% { background-position: -50% 0; } }
+
+        @supports (background-clip: text) or (-webkit-background-clip: text) {
+            header.h-14 :is(h1, h2) {
+                font-weight: 800; letter-spacing: -.015em;
+                background: linear-gradient(90deg, #0f172a, #1d4ed8 80%);
+                -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+            }
+            html.dark header.h-14 :is(h1, h2) { background-image: linear-gradient(90deg, #fff, #93c5fd 85%); }
+        }
+
+        /* Tombol aksi: kaca bulat yang menyala saat di-hover */
+        header.h-14 button:not([class*="bg-brand-"]):not([class*="bg-emerald-"]) { border-radius: 12px; }
+        header.h-14 button:not([class*="bg-brand-"]):not([class*="bg-emerald-"]):hover {
+            background-color: rgba(59, 130, 246, .1);
+            box-shadow: 0 0 0 1px rgba(59, 130, 246, .24), 0 10px 20px -12px rgba(37, 99, 235, .65);
+            translate: 0 -1px;
+        }
+        header.h-14 button svg { transition: scale .25s var(--sns-spring), rotate .35s var(--sns-spring); }
+        header.h-14 button:hover svg { scale: 1.14; }
+        header.h-14 button[onclick*="heme"]:hover svg,
+        header.h-14 button[onclick*="ark"]:hover svg { rotate: 28deg; }
+
+        /* Avatar / inisial user: cincin gradasi */
+        header.h-14 [class*="rounded-full"][class*="w-8"]:not(button),
+        header.h-14 [class*="rounded-full"][class*="w-9"]:not(button) {
+            box-shadow: 0 0 0 2px var(--sns-header-bg), 0 0 0 4px rgba(99, 102, 241, .4), 0 6px 14px -4px rgba(79, 70, 229, .5);
+            transition: scale .25s var(--sns-spring), box-shadow .25s;
+        }
+        header.h-14 [class*="rounded-full"][class*="w-8"]:not(button):hover,
+        header.h-14 [class*="rounded-full"][class*="w-9"]:not(button):hover { scale: 1.08; }
+
+        /* ═══ SIDEBAR ═══ */
+        #appSidebar {   /* tepi kanan bergradasi */
+            border-image: linear-gradient(180deg, transparent, rgba(59, 130, 246, .55) 28%, rgba(139, 92, 246, .45) 72%, transparent) 1 !important;
+        }
+
+        #appSidebar .h-14 div:has(> img) { animation: sns-breathe 4.5s ease-in-out infinite; }
+        @keyframes sns-breathe {
+            0%, 100% { filter: drop-shadow(0 0 3px rgba(59, 130, 246, .25)); }
+            50%      { filter: drop-shadow(0 0 12px rgba(59, 130, 246, .6)); }
+        }
+
+        /* Label seksi dengan garis pemisah memudar */
+        #appSidebar .block.text-\[10px\],
+        #appSidebar [class*="text-\[10px\]"][class*="uppercase"] {
+            display: flex !important; align-items: center; gap: .6rem; font-weight: 800 !important;
+        }
+        #appSidebar .block.text-\[10px\]::after,
+        #appSidebar [class*="text-\[10px\]"][class*="uppercase"]::after {
+            content: ""; flex: 1; height: 1px;
+            background: linear-gradient(90deg, rgba(148, 163, 184, .4), transparent);
+        }
+
+        /* Item: lebih lega, tebal, dan punya bar penanda saat aktif */
+        #navAllBoardsBtn,
+        #sidebarProjectTree [onclick^="selectSidebarScope"] { position: relative; font-weight: 600; min-height: 38px; }
+        #navAllBoardsBtn { border-radius: 12px !important; }
+        #navAllBoardsBtn.active-scope::before,
+        #navAllBoardsBtn[class*="bg-brand-600"]::before,
+        #sidebarProjectTree [onclick^="selectSidebarScope"][class*="bg-brand-600"]::before,
+        #sidebarProjectTree [onclick^="selectSidebarScope"][class*="bg-emerald-600"]::before {
+            content: ""; position: absolute; left: 5px; top: 50%; width: 3px; height: 52%;
+            border-radius: 3px; translate: 0 -50%;
+            background: rgba(255, 255, 255, .95); box-shadow: 0 0 10px rgba(255, 255, 255, .85);
+            animation: sns-bar .45s var(--sns-spring) backwards;
+        }
+        @keyframes sns-bar { from { scale: 1 0; opacity: 0; } }
+
+        #navAllBoardsBtn:active,
+        #sidebarProjectTree [onclick^="selectSidebarScope"]:not([class*="bg-brand-600"]):active {
+            background-image: radial-gradient(220px circle at var(--mx, 50%) var(--my, 50%), rgba(59, 130, 246, .32), transparent 70%) !important;
+        }
+
+        /* Garis pemandu pohon sub-project */
+        #sidebarProjectTree .sns-subproject-row { position: relative; }
+        #sidebarProjectTree .sns-subproject-row::before {
+            content: ""; position: absolute; left: -7px; top: 0; bottom: 0;
+            border-left: 1px dashed rgba(148, 163, 184, .4);
+        }
+        #sidebarProjectTree .sns-subproject-row::after {
+            content: ""; position: absolute; left: -7px; top: 50%; width: 6px;
+            border-top: 1px dashed rgba(148, 163, 184, .4);
+        }
+
+        /* Area scroll memudar di ujung atas/bawah */
+        #appSidebar .overflow-y-auto {
+            -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 10px, #000 calc(100% - 18px), transparent 100%);
+            mask-image: linear-gradient(to bottom, transparent 0, #000 10px, #000 calc(100% - 18px), transparent 100%);
+        }
+
+        /* Kartu status di dasar sidebar (jam WIB live) */
+        .sns-side-foot {
+            display: flex; align-items: center; gap: .7rem;
+            margin: .5rem .75rem .85rem; padding: .65rem .85rem;
+            border-radius: 14px;
+            background: linear-gradient(135deg, rgba(59, 130, 246, .1), rgba(139, 92, 246, .08));
+            border: 1px solid rgba(99, 102, 241, .2);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5);
+            font-size: 11.5px; line-height: 1.3; color: #64748b;
+            animation: sns-rise .6s var(--sns-ease) .7s backwards;
+        }
+        .sns-side-foot b { display: block; font-size: 14px; font-weight: 800; color: #0f172a; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+        html.dark .sns-side-foot { color: #94a3b8; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06); }
+        html.dark .sns-side-foot b { color: #f1f5f9; }
+        .sns-dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: #10b981; animation: sns-live 2.2s ease-out infinite; }
+        @keyframes sns-live { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, .55); } 70%, 100% { box-shadow: 0 0 0 9px rgba(16, 185, 129, 0); } }
+    </style>
+
+    {{-- SNS FIX — perbaikan hasil screenshot: ikon item aktif tak terlihat, bar terlalu tebal, glow terlalu besar, logo gelap di dark mode --}}
+    <style id="sns-fix">
+        /* 1) Ikon "Semua Board IT": dulu hampir menyatu dengan latar biru → paksa putih penuh + beri tile kaca */
+        #navAllBoardsBtn svg:first-child {
+            box-sizing: content-box;
+            padding: 4px;
+            border-radius: 8px;
+            background: rgba(59, 130, 246, .1);
+            transition: transform .25s var(--sns-spring), background-color .2s;
+        }
+        html.dark #navAllBoardsBtn svg:first-child { background: rgba(148, 163, 184, .12); }
+
+        #navAllBoardsBtn.active-scope svg,
+        #navAllBoardsBtn[class*="bg-brand-600"] svg,
+        #sidebarProjectTree [onclick^="selectSidebarScope"][class*="bg-brand-600"] svg,
+        #sidebarProjectTree [onclick^="selectSidebarScope"][class*="bg-emerald-600"] svg {
+            color: #fff !important;
+            opacity: 1 !important;
+        }
+        #navAllBoardsBtn.active-scope svg:first-child,
+        #navAllBoardsBtn[class*="bg-brand-600"] svg:first-child {
+            background: rgba(255, 255, 255, .2) !important;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .18);
+        }
+
+        /* 2) Bar penanda aktif: lebih pendek & tipis, tidak menempel ke ikon */
+        #navAllBoardsBtn.active-scope::before,
+        #navAllBoardsBtn[class*="bg-brand-600"]::before,
+        #sidebarProjectTree [onclick^="selectSidebarScope"][class*="bg-brand-600"]::before,
+        #sidebarProjectTree [onclick^="selectSidebarScope"][class*="bg-emerald-600"]::before {
+            left: 4px; height: 36%; width: 3px;
+            box-shadow: 0 0 6px rgba(255, 255, 255, .6);
+        }
+
+        /* 3) Glow item aktif dikecilkan (sebelumnya melebar dan tampak kotor) */
+        #navAllBoardsBtn.active-scope,
+        #navAllBoardsBtn[class*="bg-brand-600"],
+        #sidebarProjectTree [onclick^="selectSidebarScope"][class*="bg-brand-600"] {
+            box-shadow: 0 6px 12px -8px rgba(37, 99, 235, .65), inset 0 1px 0 rgba(255, 255, 255, .22) !important;
+        }
+
+        /* 4) Logo: tile kaca di belakang + terangkan warna biru gelapnya di dark mode */
+        #appSidebar .h-14 div:has(> img) { position: relative; isolation: isolate; }
+        #appSidebar .h-14 div:has(> img)::before {
+            content: "";
+            position: absolute; inset: -5px; z-index: -1;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #fff, #eef4ff);
+            box-shadow: inset 0 0 0 1px rgba(59, 130, 246, .2), 0 6px 14px -8px rgba(37, 99, 235, .5);
+        }
+        html.dark #appSidebar .h-14 div:has(> img)::before {
+            background: linear-gradient(135deg, rgba(255, 255, 255, .1), rgba(255, 255, 255, .03));
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12), 0 8px 18px -10px rgba(59, 130, 246, .7);
+        }
+        html.dark #appSidebar .h-14 img { filter: brightness(1.55) saturate(1.2) drop-shadow(0 0 8px rgba(96, 165, 250, .5)); }
+
+        /* 5) Subjudul "INTERNAL IT": kontras lebih baik */
+        html.dark #appSidebar .h-14 [class*="uppercase"] { color: #9fb0cf !important; letter-spacing: .12em; font-weight: 700; }
+
+        /* 6) Tombol + Project: ikon ikut hidup saat di-hover */
+        #appSidebar button[onclick="openNewBoardModal()"] svg { transition: scale .25s var(--sns-spring), rotate .3s var(--sns-spring); }
+        #appSidebar button[onclick="openNewBoardModal()"]:hover svg { scale: 1.15; rotate: -6deg; }
+    </style>
+
+    {{-- SNS SOFT — melembutkan kontras sidebar di dark mode (item aktif jadi kaca berwarna, brand menyatu dengan sidebar) --}}
+    <style id="sns-soft">
+        /* Sidebar sedikit lebih terang & brand tidak lagi band hitam */
+        html.dark #appSidebar { background-color: #0c1426 !important; }
+        html.dark #appSidebar .h-14 {
+            background-color: transparent !important;
+            border-bottom: 1px solid rgba(148, 163, 184, .1) !important;
+        }
+        html.dark #appSidebar .h-14 img { filter: brightness(1.25) saturate(1.1) drop-shadow(0 0 6px rgba(96, 165, 250, .35)); }
+        html.dark #appSidebar .h-14 div:has(> img)::before {
+            background: rgba(148, 163, 184, .08);
+            box-shadow: inset 0 0 0 1px rgba(148, 163, 184, .14);
+        }
+
+        /* Item aktif: kaca biru lembut + garis tipis, bukan blok biru solid */
+        html.dark #navAllBoardsBtn.active-scope,
+        html.dark #navAllBoardsBtn[class*="bg-brand-600"],
+        html.dark #navAllBoardsBtn[class*="bg-brand-600"]:hover,
+        html.dark #sidebarProjectTree [onclick^="selectSidebarScope"][class*="bg-brand-600"],
+        html.dark #sidebarProjectTree [onclick^="selectSidebarScope"][class*="bg-brand-600"]:hover {
+            background-color: rgba(59, 130, 246, .12) !important;
+            background-image: linear-gradient(135deg, rgba(59, 130, 246, .26), rgba(99, 102, 241, .12)) !important;
+            box-shadow: inset 0 0 0 1px rgba(96, 165, 250, .28) !important;
+            color: #dbeafe !important;
+        }
+        html.dark #navAllBoardsBtn[class*="bg-brand-600"]:hover,
+        html.dark #sidebarProjectTree [onclick^="selectSidebarScope"][class*="bg-brand-600"]:hover {
+            background-color: rgba(59, 130, 246, .18) !important;
+        }
+        html.dark #navAllBoardsBtn.active-scope svg,
+        html.dark #navAllBoardsBtn[class*="bg-brand-600"] svg,
+        html.dark #sidebarProjectTree [onclick^="selectSidebarScope"][class*="bg-brand-600"] svg { color: #93c5fd !important; }
+        html.dark #navAllBoardsBtn.active-scope svg:first-child,
+        html.dark #navAllBoardsBtn[class*="bg-brand-600"] svg:first-child {
+            background: rgba(96, 165, 250, .16) !important;
+            box-shadow: none;
+        }
+        html.dark #navAllBoardsBtn.active-scope::before,
+        html.dark #navAllBoardsBtn[class*="bg-brand-600"]::before,
+        html.dark #sidebarProjectTree [onclick^="selectSidebarScope"][class*="bg-brand-600"]::before {
+            background: #60a5fa;
+            box-shadow: 0 0 8px rgba(96, 165, 250, .6);
+        }
+
+        /* Tombol + Project: teks & garis tidak terlalu terang */
+        html.dark #appSidebar button[onclick="openNewBoardModal()"] {
+            color: #c4cfe3 !important;
+            border-color: rgba(148, 163, 184, .18) !important;
+            background-color: rgba(255, 255, 255, .035) !important;
+        }
+        html.dark #appSidebar button[onclick="openNewBoardModal()"]:hover {
+            color: #fff !important;
+            border-color: rgba(96, 165, 250, .4) !important;
         }
     </style>
 </head>
@@ -677,38 +1070,130 @@
         }
     })();
     </script>
-    {{-- Animasi muncul bertahap untuk kartu baru (kartu yang cuma dipindah/drag tidak ikut dianimasikan) --}}
     <script>
-    (function cardEntrance() {
-        if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-        const SEL = '.kanban-task-card';
+    /* SNS Fluent — interaksi: aura kursor, reveal highlight, kartu masuk bertahap, bump counter, fade tema */
+    (function snsFluent() {
+        const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const root = document.documentElement;
 
-        function collect(node, out) {
-            if (node.nodeType !== 1) return;
-            if (node.matches(SEL)) out.push(node);
-            node.querySelectorAll && node.querySelectorAll(SEL).forEach(c => out.push(c));
+        // 1) Aura + grid titik mengikuti kursor (di-throttle dengan rAF)
+        let px = 0, py = 0, tick = false;
+        if (!reduce) {
+            document.addEventListener('pointermove', e => {
+                px = e.clientX; py = e.clientY;
+                if (tick) return;
+                tick = true;
+                requestAnimationFrame(() => {
+                    root.style.setProperty('--px', px + 'px');
+                    root.style.setProperty('--py', py + 'px');
+                    tick = false;
+                });
+            }, {passive: true});
         }
 
-        function animate(cards) {
+        // 2) Reveal highlight: posisi kursor relatif terhadap kartu / item sidebar
+        const REVEAL = '.kanban-task-card, #navAllBoardsBtn, #sidebarProjectTree [onclick^="selectSidebarScope"], #appSidebar button[onclick="openNewBoardModal()"]';
+        document.addEventListener('pointermove', e => {
+            const el = e.target.closest && e.target.closest(REVEAL);
+            if (!el) return;
+            const r = el.getBoundingClientRect();
+            el.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+            el.style.setProperty('--my', (e.clientY - r.top) + 'px');
+        }, {passive: true});
+
+        // 3) Kartu baru muncul bertahap (kartu yang cuma dipindah/drag tidak ikut dianimasikan)
+        const CARD = '.kanban-task-card';
+        function collect(node, out) {
+            if (node.nodeType !== 1) return;
+            if (node.matches(CARD)) out.push(node);
+            if (node.querySelectorAll) node.querySelectorAll(CARD).forEach(c => out.push(c));
+        }
+        function reveal(cards) {
             let i = 0;
             cards.forEach(card => {
                 if (card.dataset.snsSeen) return;
                 card.dataset.snsSeen = '1';
-                card.style.setProperty('--i', Math.min(i++, 10));
+                if (reduce) return;
+                card.style.setProperty('--i', Math.min(i++, 12));
                 card.classList.add('sns-in');
                 card.addEventListener('animationend', () => card.classList.remove('sns-in'), {once: true});
             });
         }
-
         const first = [];
         collect(document.body, first);
-        animate(first);
+        reveal(first);
 
-        new MutationObserver(mutations => {
+        // 4) Angka counter kolom "membal" saat berubah
+        function bump(el) {
+            const badge = el && el.closest && el.closest('[id^="count-"]');
+            if (!badge) return;
+            const v = badge.textContent.trim();
+            if (badge.dataset.v === undefined) { badge.dataset.v = v; return; }
+            if (badge.dataset.v === v) return;
+            badge.dataset.v = v;
+            if (reduce) return;
+            badge.classList.remove('sns-bump');
+            void badge.offsetWidth;
+            badge.classList.add('sns-bump');
+        }
+        document.querySelectorAll('[id^="count-"]').forEach(b => b.dataset.v = b.textContent.trim());
+
+        new MutationObserver(list => {
             const added = [];
-            mutations.forEach(m => m.addedNodes.forEach(n => collect(n, added)));
-            if (added.length) animate(added);
-        }).observe(document.body, {childList: true, subtree: true});
+            list.forEach(m => {
+                m.addedNodes.forEach(n => collect(n, added));
+                bump(m.target.nodeType === 1 ? m.target : m.target.parentElement);
+            });
+            if (added.length) reveal(added);
+        }).observe(document.body, {childList: true, subtree: true, characterData: true});
+
+        // 5) Transisi halus saat ganti light/dark
+        let wasDark = root.classList.contains('dark'), fadeTimer;
+        new MutationObserver(() => {
+            const isDark = root.classList.contains('dark');
+            if (isDark === wasDark) return;
+            wasDark = isDark;
+            root.classList.add('sns-theme-fade');
+            clearTimeout(fadeTimer);
+            fadeTimer = setTimeout(() => root.classList.remove('sns-theme-fade'), 500);
+        }).observe(root, {attributes: true, attributeFilter: ['class']});
+    })();
+    </script>
+    <script>
+    /* SNS Chrome — bayangan header saat scroll + kartu jam WIB di dasar sidebar */
+    (function snsChrome() {
+        const root = document.documentElement;
+
+        // Header menebalkan bayangan ketika ada area yang di-scroll
+        const scrolled = new Set();
+        document.addEventListener('scroll', e => {
+            const t = e.target === document ? document.scrollingElement : e.target;
+            if (!t) return;
+            ((t.scrollTop || 0) > 4) ? scrolled.add(t) : scrolled.delete(t);
+            root.classList.toggle('sns-scrolled', scrolled.size > 0);
+        }, {capture: true, passive: true});
+
+        // Kartu status + jam: hanya dipasang kalau sidebar berupa kolom flex
+        function mountFooter() {
+            const side = document.getElementById('appSidebar');
+            if (!side || side.querySelector('.sns-side-foot')) return;
+            const cs = getComputedStyle(side);
+            if (cs.display !== 'flex' || cs.flexDirection !== 'column') return;
+
+            const foot = document.createElement('div');
+            foot.className = 'sns-side-foot';
+            foot.innerHTML = '<span class="sns-dot" aria-hidden="true"></span><div><b data-sns-time>--.--</b><span data-sns-date></span></div>';
+            side.appendChild(foot);
+
+            const t = foot.querySelector('[data-sns-time]'), d = foot.querySelector('[data-sns-date]');
+            const fT = new Intl.DateTimeFormat('id-ID', {hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Jakarta'});
+            const fD = new Intl.DateTimeFormat('id-ID', {weekday: 'long', day: 'numeric', month: 'short', timeZone: 'Asia/Jakarta'});
+            const tick = () => { const n = new Date(); t.textContent = fT.format(n).replace(':', '.') + ' WIB'; d.textContent = fD.format(n); };
+            tick();
+            setInterval(tick, 10000);
+        }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mountFooter);
+        else mountFooter();
     })();
     </script>
 </body>
