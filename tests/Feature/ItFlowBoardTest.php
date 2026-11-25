@@ -60,6 +60,122 @@ class ItFlowBoardTest extends TestCase
         $this->postJson('/board/api/users', ['name' => 'Invalid NIP', 'nip' => '123', 'role' => 'it_staff', 'password' => 'password123', 'assignment_mode' => 'atl'])->assertStatus(422);
     }
 
+    public function test_atl_dashboard_filters_completion_and_card_lists_match(): void
+    {
+        $atl = $this->user('atl', '0000000121');
+        $staff = $this->user('it_staff', '0000000122');
+        $this->actingAs($staff)->get('/dashboard')->assertForbidden();
+        $this->getJson('/dashboard/api')->assertForbidden();
+        $this->actingAs($atl)->get('/dashboard')->assertOk()->assertSee('Task Selesai');
+        $this->travelTo(\Carbon\CarbonImmutable::parse('2026-11-25 10:00:00', 'Asia/Jakarta'));
+        $project = $this->postJson('/board/api/projects', ['name' => 'Dashboard', 'prefix' => 'DSH'])->assertCreated()->json();
+        foreach (['/dashboard', '/board'] as $path) {
+            $this->get($path)->assertOk()
+                ->assertSee('navAllBoardsBtn')->assertSee('navDashboardBtn')
+                ->assertSee('sidebarProjectTree')->assertSee('currentUserName')
+                ->assertSee('toggleDarkMode()')->assertSee('itflow/board.css')
+                ->assertSee('itflow/dashboard.css')->assertSee('DSH');
+        }
+        $task = $this->postJson('/board/api/tasks', ['project_id' => $project['id'], 'sub_project_id' => null,
+            'title' => 'Task lama', 'status' => 'todo', 'category' => 'maintenance', 'priority' => 'critical',
+            'assignee_id' => $staff->id])->assertCreated()->json();
+        DB::table('tasks')->where('id', $task['id'])->update(['created_at' => '2026-10-20 00:00:00', 'due_date' => '2026-11-24']);
+        $this->patchJson('/board/api/tasks/'.$task['id'].'/status', ['status' => 'done'])->assertOk();
+        $this->assertDatabaseHas('tasks', ['id' => $task['id'], 'completed_at' => now()->toDateTimeString()]);
+
+        foreach (['today', '7d', 'mtd', 'ytd', 'all'] as $period) {
+            $data = $this->getJson('/dashboard/api?period='.$period)->assertOk()->json();
+            foreach (['new', 'done', 'overdue', 'critical'] as $key) {
+                $list = $this->getJson('/dashboard/api?period='.$period.'&list='.$key)->assertOk()->json();
+                $this->assertSame($data['counts'][$key], $list['count']);
+                $this->assertCount($list['count'], $list['tasks']);
+            }
+            $this->assertSame(1, $data['counts']['done']);
+            $this->assertSame(in_array($period, ['ytd', 'all'], true) ? 1 : 0, $data['counts']['new']);
+            $this->assertSame(0, $data['counts']['overdue'] + $data['counts']['critical']);
+        }
+        $this->assertContains($task['id'], array_column($this->getJson('/dashboard/api?period=today&list=done')->json('tasks'), 'id'));
+        DB::table('tasks')->where('id', $task['id'])->delete();
+        $this->travelBack();
+    }
+
+    public function test_all_status_paths_record_completion_and_reopening_clears_it(): void
+    {
+        $atl = $this->user('atl', '0000000131');
+        $this->travelTo(\Carbon\CarbonImmutable::parse('2026-11-25 09:00:00', 'Asia/Jakarta'));
+        $project = $this->actingAs($atl)->postJson('/board/api/projects', ['name' => 'Completions', 'prefix' => 'CMP'])->assertCreated()->json();
+        $payload = ['project_id' => $project['id'], 'sub_project_id' => null, 'title' => 'Track completion',
+            'category' => 'maintenance', 'priority' => 'high', 'assignee_id' => $atl->id];
+
+        $createdDone = $this->postJson('/board/api/tasks', $payload + ['status' => 'done'])->assertCreated()->json();
+        $this->assertDatabaseHas('tasks', ['id' => $createdDone['id'], 'completed_at' => now()->toDateTimeString()]);
+
+        $edited = $this->postJson('/board/api/tasks', $payload + ['status' => 'todo'])->assertCreated()->json();
+        $this->patchJson('/board/api/tasks/'.$edited['id'], [
+            'title' => 'Track completion', 'status' => 'done', 'sub_project_id' => null,
+            'category' => 'maintenance', 'priority' => 'high', 'assignee_id' => $atl->id,
+        ])->assertOk();
+        $this->assertDatabaseHas('tasks', ['id' => $edited['id'], 'completed_at' => now()->toDateTimeString()]);
+
+        $moved = $this->postJson('/board/api/tasks', $payload + ['status' => 'todo'])->assertCreated()->json();
+        $this->patchJson('/board/api/tasks/'.$moved['id'].'/status', ['status' => 'done'])->assertOk();
+        $this->assertDatabaseHas('tasks', ['id' => $moved['id'], 'completed_at' => now()->toDateTimeString()]);
+        $this->patchJson('/board/api/tasks/'.$moved['id'].'/status', ['status' => 'todo'])->assertOk();
+        $this->assertDatabaseHas('tasks', ['id' => $moved['id'], 'completed_at' => null]);
+        DB::table('tasks')->whereIn('id', [$createdDone['id'], $edited['id'], $moved['id']])->delete();
+        $this->travelBack();
+    }
+
+    public function test_follow_up_combines_overdue_and_critical_without_duplicates(): void
+    {
+        $atl = $this->user('atl', '0000000141');
+        $this->travelTo(\Carbon\CarbonImmutable::parse('2026-11-25 10:00:00', 'Asia/Jakarta'));
+        $project = $this->actingAs($atl)->postJson('/board/api/projects', ['name' => 'Follow up', 'prefix' => 'FUP'])->assertCreated()->json();
+        $task = $this->postJson('/board/api/tasks', ['project_id' => $project['id'], 'sub_project_id' => null,
+            'title' => 'Critical overdue', 'status' => 'todo', 'category' => 'maintenance', 'priority' => 'critical',
+            'assignee_id' => $atl->id])->assertCreated()->json();
+        DB::table('tasks')->where('id', $task['id'])->update(['due_date' => '2026-11-24']);
+
+        $data = $this->getJson('/dashboard/api?period=7d')->assertOk()->json();
+        $this->assertSame(1, $data['counts']['overdue']);
+        $this->assertSame(1, $data['counts']['critical']);
+        $this->assertCount(1, $data['follow_up']);
+        $this->assertTrue($data['follow_up'][0]['overdue']);
+        $this->assertTrue($data['follow_up'][0]['critical']);
+        DB::table('tasks')->where('id', $task['id'])->delete();
+        $this->travelBack();
+    }
+
+    public function test_dashboard_workload_follows_assignee_change_and_matches_clicked_list(): void
+    {
+        $atl = $this->user('atl', '0000000151');
+        $firstPic = $this->user('it_staff', '0000000152');
+        $secondPic = $this->user('it_staff', '0000000153');
+        $firstPic->update(['name' => 'PIC Pertama']);
+        $secondPic->update(['name' => 'PIC Kedua']);
+        $this->travelTo(\Carbon\CarbonImmutable::parse('2026-11-25 10:00:00', 'Asia/Jakarta'));
+        $project = $this->actingAs($atl)->postJson('/board/api/projects', ['name' => 'Workload', 'prefix' => 'WRK'])->assertCreated()->json();
+        $task = $this->postJson('/board/api/tasks', ['project_id' => $project['id'], 'sub_project_id' => null,
+            'title' => 'PIC task', 'status' => 'todo', 'category' => 'maintenance', 'priority' => 'high',
+            'assignee_id' => $firstPic->id])->assertCreated()->json();
+
+        $before = $this->getJson('/dashboard/api?period=7d')->assertOk()->json('workload');
+        $this->assertSame(['pic_id' => $firstPic->id, 'pic' => 'PIC Pertama', 'todo' => 1, 'in_progress' => 0], $before[0]);
+        $list = $this->getJson('/dashboard/api?period=7d&workload=1&pic='.$firstPic->id)->assertOk()->json();
+        $this->assertSame($before[0]['todo'] + $before[0]['in_progress'], $list['count']);
+        $this->assertSame('PIC Pertama', $list['tasks'][0]['pic']);
+
+        $this->patchJson('/board/api/tasks/'.$task['id'], ['title' => 'PIC task', 'status' => 'in_progress',
+            'sub_project_id' => null, 'category' => 'maintenance', 'priority' => 'high',
+            'assignee_id' => $secondPic->id])->assertOk();
+        $after = $this->getJson('/dashboard/api?period=7d')->assertOk()->json('workload');
+        $this->assertSame(['pic_id' => $secondPic->id, 'pic' => 'PIC Kedua', 'todo' => 0, 'in_progress' => 1], $after[0]);
+        $this->getJson('/dashboard/api?period=7d&workload=1&pic='.$firstPic->id)->assertJsonPath('count', 0);
+        $this->getJson('/dashboard/api?period=7d&workload=1&pic='.$secondPic->id)->assertJsonPath('count', 1)->assertJsonPath('tasks.0.id', $task['id']);
+        DB::table('tasks')->where('id', $task['id'])->delete();
+        $this->travelBack();
+    }
+
     public function test_project_task_detail_and_role_access_persist(): void
     {
         $atl = $this->user('atl', '0000000001');

@@ -4,6 +4,7 @@ use App\Http\Controllers\ItFlowBoardController;
 use App\Http\Controllers\ItFlowBoardApiController;
 use App\Http\Controllers\ItFlowExportController;
 use App\Http\Controllers\ItFlowSessionController;
+use App\Http\Controllers\ItFlowDashboardController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/board');
@@ -16,6 +17,8 @@ Route::middleware('guest')->group(function (): void {
 
 Route::middleware(['auth', 'active'])->group(function (): void {
     Route::get('/board', ItFlowBoardController::class)->name('dashboard');
+    Route::get('/dashboard', [ItFlowDashboardController::class, 'index'])->name('atl.dashboard');
+    Route::get('/dashboard/api', [ItFlowDashboardController::class, 'data'])->name('atl.dashboard.data');
     Route::get('/board/api/meta', [ItFlowBoardApiController::class, 'meta'])->name('board.meta');
     Route::get('/board/api/users', [ItFlowBoardApiController::class, 'users'])->name('board.users.index');
     Route::post('/board/api/users', [ItFlowBoardApiController::class, 'storeUser'])->name('board.users.store');

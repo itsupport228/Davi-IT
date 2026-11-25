@@ -197,7 +197,7 @@ class ItFlowBoardApiController extends Controller
             DB::table('projects')->where('id', $project->id)->update(['next_task_number' => $number + 1, 'updated_at' => now()]);
             $taskId = DB::table('tasks')->insertGetId([
                 'project_id'=>$project->id,'sub_project_id'=>$data['sub_project_id'] ?? null,'assignee_id'=>$data['assignee_id'],'reporter_id'=>$user->id,
-                'code'=>$project->prefix.'-'.$number,'title'=>$data['title'],'description'=>$data['description'] ?? null,'status'=>$data['status'],
+                'code'=>$project->prefix.'-'.$number,'title'=>$data['title'],'description'=>$data['description'] ?? null,'status'=>$data['status'], 'completed_at'=>$data['status'] === 'done' ? now() : null,
                 'category'=>$data['category'],'priority'=>$data['priority'],'due_date'=>$data['due_date'] ?? null,'created_at'=>now(),'updated_at'=>now(),
             ]);
             foreach (array_filter(array_map('trim', $data['subtasks'] ?? [])) as $title) DB::table('subtasks')->insert(['task_id'=>$taskId,'title'=>$title,'is_done'=>false,'created_at'=>now(),'updated_at'=>now()]);
@@ -216,7 +216,9 @@ class ItFlowBoardApiController extends Controller
         abort_unless(Task::allowedAssignees($user)->whereKey($data['assignee_id'])->exists(), 403);
         if ($user->role === 'it_staff') $data['assignee_id'] = $user->id;
         DB::transaction(function () use ($model, $data, $user) {
-            $model->update(collect($data)->only(['title','description','status','sub_project_id','category','priority','assignee_id','due_date'])->all());
+            $values = collect($data)->only(['title','description','status','sub_project_id','category','priority','assignee_id','due_date'])->all();
+            if (isset($data['status']) && $data['status'] !== $model->status) $values['completed_at'] = $data['status'] === 'done' ? now() : null;
+            $model->update($values);
             $existingIds = [];
             foreach ($data['subtasks'] ?? [] as $sub) {
                 if (! empty($sub['id'])) {
@@ -237,7 +239,10 @@ class ItFlowBoardApiController extends Controller
 
     public function updateStatus(Request $request, int $task): JsonResponse
     {
-        $model = $this->allowedTask($request, $task); $data = $request->validate(['status'=>[Rule::in(['todo','in_progress','done'])]]); $model->update(['status'=>$data['status']]); return response()->json(['status'=>$model->status]);
+        $model = $this->allowedTask($request, $task); $data = $request->validate(['status'=>['required', Rule::in(['todo','in_progress','done'])]]);
+        $values = ['status' => $data['status']];
+        if ($data['status'] !== $model->status) $values['completed_at'] = $data['status'] === 'done' ? now() : null;
+        $model->update($values); return response()->json(['status'=>$model->status]);
     }
 
     public function destroyTask(Request $request, int $task): JsonResponse { $model = $this->allowedTask($request, $task); $model->delete(); return response()->json(['deleted'=>true]); }

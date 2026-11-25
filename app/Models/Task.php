@@ -28,7 +28,13 @@ class Task extends Model
 
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
-        return $query->whereIn('tasks.assignee_id', self::allowedAssignees($user)->select('users.id'));
+        return match ($user->role) {
+            'atl' => $query,
+            'tl' => $query->where(fn (Builder $tasks) => $tasks->where('tasks.assignee_id', $user->id)
+                ->orWhereIn('tasks.assignee_id', DB::table('tl_staff')->where('tl_id', $user->id)->select('staff_id'))),
+            'it_staff' => $query->where('tasks.assignee_id', $user->id),
+            default => $query->whereRaw('1 = 0'),
+        };
     }
 
     public static function allowedAssignees(User $user): Builder

@@ -7,6 +7,9 @@
     $prototypeScript = str_replace("selectedTimeFilter === '1d' && diffDays > 1.5", "selectedTimeFilter === '1d' && diffDays > 1", $prototypeScript);
     $prototypeScript = preg_replace('/        function exportRecapToExcel\(periodKey = .*?        \/\/ Initialize icons on page load/s', "        function exportRecapToExcel(periodKey, boardScope) { confirmExportExcel(); }\n\n        // Initialize icons on page load", $prototypeScript);
     $prototypeStyle = substr($reference, strpos($reference, '<style>'), strpos($reference, '</style>') + 8 - strpos($reference, '<style>'));
+    if ($user->role === 'atl') {
+        $workspace = str_replace('            <!-- Compact 2-Row Filter Toolbar', view('itflow.dashboard')->render().'            <!-- Compact 2-Row Filter Toolbar', $workspace);
+    }
 @endphp
 <!DOCTYPE html>
 <html lang="id" class="light">
@@ -21,6 +24,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('itflow/board.css') }}">
+    @if ($user->role === 'atl')
+        <link rel="stylesheet" href="{{ asset('itflow/dashboard.css') }}">
+    @endif
     <script src="https://unpkg.com/lucide@latest"></script>
     <script>tailwind.config = {darkMode: 'class', theme: {extend: {fontFamily: {sans: ['Plus Jakarta Sans', 'sans-serif'], mono: ['JetBrains Mono', 'monospace']}, colors: {brand: {50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 900: '#1e3a8a', 950: '#172554'}}}}};</script>
     {!! $prototypeStyle !!}
@@ -1440,7 +1446,7 @@
         html:not(.dark) dialog.user-management-modal .user-management-form footer .user-save-button:hover { background: #2f44ad; }
     </style>
 </head>
-<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans antialiased selection:bg-brand-500 selection:text-white">
+<body class="{{ $dashboardMode ? 'dashboard-mode ' : '' }}bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans antialiased selection:bg-brand-500 selection:text-white">
     {!! $workspace !!}
     <dialog id="boardConfirmDialog" class="board-modal board-confirm" aria-labelledby="boardConfirmTitle">
         <header><h2 id="boardConfirmTitle"></h2><button type="button" data-modal-close aria-label="Tutup">×</button></header>
@@ -1495,6 +1501,25 @@
         {!! $prototypeScript !!}
     </script>
     <script src="{{ asset('itflow/board.js') }}" defer></script>
+    @if ($user->role === 'atl')
+        <script src="{{ asset('itflow/dashboard.js') }}" defer></script>
+    @endif
+    @if ($user->role === 'atl')
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const allBoards = document.getElementById('navAllBoardsBtn');
+                allBoards?.insertAdjacentHTML('beforebegin', '<a id="navDashboardBtn" href="{{ route('atl.dashboard') }}" class="sns-dashboard-link"><i data-lucide="chart-no-axes-combined" class="w-4 h-4"></i><span>Dashboard</span></a>');
+                if (window.lucide) lucide.createIcons();
+            });
+        </script>
+        <style>
+            .sns-dashboard-link { display:flex; align-items:center; gap:10px; width:100%; padding:9px 12px; margin-bottom:6px; border-radius:10px; color:var(--sns-sidebar-text); font-size:12px; font-weight:700; }
+            .sns-dashboard-link:hover, .sns-dashboard-link:focus-visible { background:var(--sns-sidebar-hover); color:#2563eb; }
+            body.dashboard-mode .sns-dashboard-link { background:var(--sns-sidebar-active); color:#fff; }
+            body.dashboard-mode #navAllBoardsBtn { background:transparent !important; background-image:none !important; color:var(--sns-sidebar-text) !important; box-shadow:none !important; }
+            body.dashboard-mode #navAllBoardsBtn svg { color:var(--sns-sidebar-text) !important; }
+        </style>
+    @endif
     {{-- Override logo & brand name from prototype to IT SNSac --}}
     <script>
     (function patchBrand() {

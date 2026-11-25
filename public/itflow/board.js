@@ -194,6 +194,29 @@ renderSidebarProjectTree = function () {
     });
 };
 
+const originalSelectSidebarScope = selectSidebarScope;
+selectSidebarScope = function (boardPrefix, subProjectId) {
+    if (document.body.classList.contains('dashboard-mode')) setWorkspaceView(false);
+    originalSelectSidebarScope(boardPrefix, subProjectId);
+};
+
+function setWorkspaceView(dashboard, updateUrl = true) {
+    const panel = document.getElementById('atlDashboard');
+    if (!panel) return;
+    document.body.classList.toggle('dashboard-mode', dashboard);
+    panel.hidden = !dashboard;
+    const toolbar = panel.nextElementSibling.nextElementSibling;
+    toolbar.hidden = dashboard;
+    toolbar.nextElementSibling.hidden = dashboard;
+    document.getElementById('activeScopeBoardBadge').classList.toggle('hidden', dashboard);
+    document.getElementById('activeScopeTitle').textContent = dashboard ? 'Dashboard' : selectedBoardFilter === 'ALL' ? 'Semua Board IT' : boards[selectedBoardFilter] || selectedBoardFilter;
+    document.getElementById('activeScopeSubSep').classList.toggle('hidden', dashboard || selectedSubProjectFilter === 'ALL');
+    document.getElementById('activeScopeSubBadge').classList.toggle('hidden', dashboard || selectedSubProjectFilter === 'ALL');
+    document.getElementById('navDashboardBtn')?.setAttribute('aria-current', dashboard ? 'page' : 'false');
+    if (updateUrl) history.pushState({dashboard}, '', dashboard ? '/dashboard' : '/board');
+    if (dashboard && typeof loadDashboard === 'function') loadDashboard();
+}
+
 function deleteButton(label, remove) {
     const button = document.createElement('button');
     button.type = 'button';
@@ -373,4 +396,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (localStorage.getItem('itflow-board-theme') === 'dark') document.documentElement.classList.add('dark');
     applyAuthenticatedUserUI(user);
     renderSidebarProjectTree(); renderAvatarFilters(); renderPriorityFilterPills(); renderBoard(); initSortable();
+    const dashboardLink = document.getElementById('navDashboardBtn');
+    dashboardLink?.addEventListener('click', event => { event.preventDefault(); setWorkspaceView(true); });
+    document.getElementById('navAllBoardsBtn')?.addEventListener('click', () => {
+        if (document.body.classList.contains('dashboard-mode')) setWorkspaceView(false);
+    });
+    if (dashboardLink) {
+        setWorkspaceView(location.pathname === '/dashboard', false);
+        window.addEventListener('popstate', () => setWorkspaceView(location.pathname === '/dashboard', false));
+    }
+    const detailId = new URLSearchParams(location.search).get('task');
+    if (detailId && /^\d+$/.test(detailId)) openDetailModal(detailId);
 });

@@ -157,6 +157,7 @@ class ItFlowBoardController extends Controller
                 'q' => $search,
             ],
             'prototypeData' => $prototypeData,
+            'dashboardMode' => $request->routeIs('atl.dashboard'),
         ]);
     }
 }
