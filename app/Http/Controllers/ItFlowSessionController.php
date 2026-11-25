@@ -6,6 +6,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
+use App\Models\User;
 use Illuminate\View\View;
 
 class ItFlowSessionController extends Controller
@@ -35,7 +36,7 @@ class ItFlowSessionController extends Controller
                 ->withErrors(['nip' => "Terlalu banyak percobaan. Coba lagi dalam {$seconds} detik."]);
         }
 
-        if (! Auth::attempt($credentials)) {
+        if (! Auth::attempt(['nip' => $credentials['nip'], 'password' => $credentials['password'], 'is_active' => true])) {
             RateLimiter::hit($key, 60);
 
             return back()->withInput($request->only('nip'))

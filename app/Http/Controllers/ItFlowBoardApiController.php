@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Task;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 
 class ItFlowBoardApiController extends Controller
@@ -43,6 +45,87 @@ class ItFlowBoardApiController extends Controller
         $subProjects = DB::table('sub_projects')->orderBy('id')->get(['id','project_id','name']);
         $assignees = Task::allowedAssignees($user)->orderBy('name')->get(['id','name','nip','role']);
         return response()->json(compact('projects','subProjects','assignees'));
+    }
+
+    public function users(Request $request): JsonResponse
+    {
+        abort_unless($request->user()->role === 'atl', 403);
+
+        return response()->json([
+            'users' => User::query()->orderBy('name')->get(['id', 'name', 'nip', 'role', 'is_active'])
+                ->map(fn (User $user) => [
+                    'id' => $user->id, 'name' => $user->name, 'nip' => $user->nip,
+                    'role' => $user->role, 'is_active' => $user->is_active,
+                    'tl_ids' => DB::table('tl_staff')->where('staff_id', $user->id)->pluck('tl_id')->values(),
+                    'has_history' => DB::table('tasks')->where(fn ($q) => $q->where('assignee_id', $user->id)->orWhere('reporter_id', $user->id))->exists() || DB::table('task_comments')->where('user_id', $user->id)->exists(),
+                ]),
+            'tls' => User::query()->where('role', 'tl')->where('is_active', true)->orderBy('name')->get(['id', 'name', 'nip']),
+        ]);
+    }
+
+    public function storeUser(Request $request): JsonResponse
+    {
+        abort_unless($request->user()->role === 'atl', 403);
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'], 'nip' => ['required', 'string', 'regex:/\A[0-9]{10}\z/', 'unique:users,nip'],
+            'role' => ['required', Rule::in(['tl', 'it_staff'])], 'password' => ['required', 'string', 'min:8', 'max:255'],
+            'assignment_mode' => ['required', Rule::in(['atl', 'tl'])], 'tl_ids' => ['nullable', 'array'], 'tl_ids.*' => ['integer', 'distinct', 'exists:users,id'],
+        ]);
+        $this->validateTlIds($data['role'], $data['assignment_mode'], $data['tl_ids'] ?? []);
+        $user = DB::transaction(function () use ($data): User {
+            $user = User::create(['name' => trim($data['name']), 'nip' => $data['nip'], 'role' => $data['role'], 'password' => Hash::make($data['password']), 'is_active' => true]);
+            $this->syncTlStaff($user, $data['tl_ids'] ?? []);
+            return $user;
+        });
+        return response()->json($user->only(['id', 'name', 'nip', 'role', 'is_active']), 201);
+    }
+
+    public function updateUser(Request $request, int $user): JsonResponse
+    {
+        abort_unless($request->user()->role === 'atl', 403);
+        $model = User::findOrFail($user);
+        abort_if($model->role === 'atl', 403, 'Akun ATL dilindungi.');
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'], 'nip' => ['required', 'string', 'regex:/\A[0-9]{10}\z/', Rule::unique('users', 'nip')->ignore($model->id)],
+            'role' => ['required', Rule::in(['tl', 'it_staff'])], 'password' => ['nullable', 'string', 'min:8', 'max:255'],
+            'assignment_mode' => ['required', Rule::in(['atl', 'tl'])], 'tl_ids' => ['nullable', 'array'], 'tl_ids.*' => ['integer', 'distinct', 'exists:users,id'],
+        ]);
+        $this->validateTlIds($data['role'], $data['assignment_mode'], $data['tl_ids'] ?? []);
+        DB::transaction(function () use ($model, $data): void {
+            $values = ['name' => trim($data['name']), 'nip' => $data['nip'], 'role' => $data['role']];
+            if (! empty($data['password'])) $values['password'] = Hash::make($data['password']);
+            $model->update($values); $this->syncTlStaff($model, $data['tl_ids'] ?? []);
+        });
+        return response()->json($model->fresh()->only(['id', 'name', 'nip', 'role', 'is_active']));
+    }
+
+    public function destroyUser(Request $request, int $user): JsonResponse
+    {
+        abort_unless($request->user()->role === 'atl', 403);
+        $model = User::findOrFail($user);
+        abort_if($model->role === 'atl', 403, 'Akun ATL dilindungi.');
+        abort_if($model->id === $request->user()->id, 422, 'Akun yang sedang digunakan tidak dapat dihapus.');
+        $hasHistory = DB::table('tasks')->where(fn ($query) => $query->where('assignee_id', $model->id)->orWhere('reporter_id', $model->id))->exists() || DB::table('task_comments')->where('user_id', $model->id)->exists();
+        if ($hasHistory) {
+            $model->update(['is_active' => false]);
+            return response()->json(['deactivated' => true]);
+        }
+        DB::transaction(function () use ($model): void { DB::table('tl_staff')->where(fn ($q) => $q->where('tl_id', $model->id)->orWhere('staff_id', $model->id))->delete(); $model->delete(); });
+        return response()->json(['deleted' => true]);
+    }
+
+    private function validateTlIds(string $role, string $assignmentMode, array $tlIds): void
+    {
+        abort_if($role === 'tl' && ($assignmentMode !== 'atl' || $tlIds), 422, 'Pilihan relasi hanya tersedia untuk Staff.');
+        abort_if($role === 'it_staff' && $assignmentMode === 'tl' && count($tlIds) < 1, 422, 'Pilih minimal satu TL.');
+        abort_if($role === 'it_staff' && $assignmentMode === 'atl' && $tlIds, 422, 'Staff langsung ke ATL tidak boleh memiliki relasi TL.');
+        abort_if($tlIds && User::query()->whereIn('id', $tlIds)->where('role', '!=', 'tl')->exists(), 422, 'Relasi hanya dapat menggunakan user TL.');
+    }
+
+    private function syncTlStaff(User $user, array $tlIds): void
+    {
+        DB::table('tl_staff')->where('staff_id', $user->id)->delete();
+        foreach (array_unique($tlIds) as $tlId) DB::table('tl_staff')->insert(['tl_id' => $tlId, 'staff_id' => $user->id]);
     }
 
     public function project(Request $request): JsonResponse

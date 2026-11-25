@@ -980,6 +980,465 @@
             border-color: rgba(96, 165, 250, .4) !important;
         }
     </style>
+
+    {{-- ================================================================
+         SNS LIGHT — tema mode terang disamakan dengan halaman login
+         (navy #16255c, aksen #3d55c9, garis #c9d5f2, latar biru muda).
+         SEMUA aturan diawali html:not(.dark) → mode gelap tidak tersentuh.
+         Hapus blok <style id="sns-light"> ini untuk kembali ke light lama.
+    ================================================================= --}}
+    <style id="sns-light">
+        /* ═══ 1. TOKEN: lapisan jelas → latar < kolom < kartu ═══ */
+        html:not(.dark) {
+            --sns-sidebar-bg: #c6defe;
+            --sns-sidebar-border: #b4c3ea;
+            --sns-sidebar-text: #3a4a7a;
+            --sns-sidebar-hover: rgba(255, 255, 255, .72);
+            --sns-sidebar-active: #3d55c9;
+
+            --sns-main-bg: #dbe9ff;
+            --sns-header-bg: rgba(255, 255, 255, .94);
+            --sns-header-border: #c9d5f2;
+            --sns-toolbar-bg: rgba(255, 255, 255, .84);
+            --sns-toolbar-border: #c9d5f2;
+
+            --sns-col-bg: rgba(184, 207, 248, .96);
+            --sns-col-border: #8fb0ec;
+            --sns-col-header-border: #8fb0ec;
+            --sns-col-title: #1f3277;
+
+            --sns-card-bg: #ffffff;
+            --sns-card-border: #b0c6f0;
+            --sns-card-border-hover: #7f93dc;
+            --sns-card-shadow: 0 1px 2px rgba(22, 37, 92, .10), 0 6px 12px -6px rgba(50, 90, 160, .25), inset 0 1px 0 #fff;
+            --sns-card-shadow-hover: 0 18px 32px -14px rgba(61, 85, 201, .45), 0 4px 10px -4px rgba(22, 37, 92, .14), inset 0 1px 0 #fff;
+            --sns-spot: rgba(61, 85, 201, .12);
+
+            --sns-input-bg: #f1f5ff;
+            --sns-input-border: #c9d5f2;
+            --sns-input-focus-border: #3d55c9;
+
+            --sns-modal-bg: #ffffff;
+            --sns-modal-border: #b4c3ea;
+            --sns-modal-header-bg: #eef4ff;
+            --sns-backdrop: rgba(22, 37, 92, .5);
+        }
+
+        /* ═══ 2. LATAR HALAMAN: gradien + blob seperti login ═══ */
+        html:not(.dark) body {
+            background-image: linear-gradient(135deg, #d6e7ff 0%, #eef5ff 45%, #cfe6ff 100%);
+            background-attachment: fixed;
+        }
+        html:not(.dark) body::before {
+            background:
+                radial-gradient(40% 36% at 14% 18%, rgba(110, 155, 232, .5), transparent 70%),
+                radial-gradient(34% 34% at 88% 12%, rgba(90, 150, 230, .4), transparent 70%),
+                radial-gradient(40% 40% at 66% 90%, rgba(120, 200, 245, .55), transparent 70%);
+        }
+        html:not(.dark)::before { background-image: radial-gradient(circle, rgba(61, 85, 201, .3) 1px, transparent 1.6px); }
+
+        /* ═══ 3. SIDEBAR: panel biru muda seperti sisi kiri login ═══ */
+        html:not(.dark) #appSidebar {
+            background-color: #c6defe !important;
+            background-image: linear-gradient(160deg, #c6defe 0%, #b6d4fd 50%, #aee3fd 100%) !important;
+            box-shadow: 4px 0 18px -8px rgba(50, 90, 160, .3) !important;
+        }
+        html:not(.dark) #appSidebar .h-14 {
+            background-color: rgba(255, 255, 255, .35) !important;
+            border-bottom: 1px solid rgba(61, 85, 201, .18) !important;
+        }
+        @supports (background-clip: text) or (-webkit-background-clip: text) {
+            html:not(.dark) #appSidebar .font-bold.text-base { background-image: linear-gradient(90deg, #16255c, #3d55c9 80%); }
+            html:not(.dark) header.h-14 :is(h1, h2) { background-image: linear-gradient(90deg, #16255c, #3d55c9 85%); }
+        }
+        html:not(.dark) #appSidebar .block.text-\[10px\],
+        html:not(.dark) #appSidebar [class*="text-\[10px\]"][class*="uppercase"] { color: #4a5a8c !important; }
+
+        /* item biasa */
+        html:not(.dark) #navAllBoardsBtn:hover,
+        html:not(.dark) #sidebarProjectTree [onclick^="selectSidebarScope"]:hover { color: #16255c !important; }
+        html:not(.dark) #navAllBoardsBtn svg:first-child { background: rgba(255, 255, 255, .7); }
+
+        /* item aktif: biru aksen login */
+        html:not(.dark) #navAllBoardsBtn.active-scope,
+        html:not(.dark) #navAllBoardsBtn[class*="bg-brand-600"],
+        html:not(.dark) #sidebarProjectTree [onclick^="selectSidebarScope"][class*="bg-brand-600"] {
+            background-color: #3d55c9 !important;
+            background-image: linear-gradient(180deg, #4a63d6, #3d55c9) !important;
+            box-shadow: 0 6px 14px -8px rgba(61, 85, 201, .75), inset 0 1px 0 rgba(255, 255, 255, .22) !important;
+            color: #fff !important;
+        }
+        html:not(.dark) #navAllBoardsBtn[class*="bg-brand-600"]:hover,
+        html:not(.dark) #sidebarProjectTree [onclick^="selectSidebarScope"][class*="bg-brand-600"]:hover {
+            background-color: #2f44ad !important;
+        }
+        html:not(.dark) #sidebarProjectTree [onclick^="selectSidebarScope"][class*="bg-brand-50"] {
+            background-color: rgba(255, 255, 255, .85) !important;
+            color: #2f44ad !important;
+        }
+
+        /* tombol + Project: pil putih transparan seperti chip role di login */
+        html:not(.dark) #appSidebar button[onclick="openNewBoardModal()"] {
+            background-color: rgba(255, 255, 255, .78) !important;
+            border: 1px solid rgba(61, 85, 201, .28) !important;
+            color: #1f3277 !important;
+        }
+        html:not(.dark) #appSidebar button[onclick="openNewBoardModal()"]:hover {
+            background-color: #fff !important;
+            border-color: #3d55c9 !important;
+            color: #16255c !important;
+        }
+
+        html:not(.dark) #appSidebar ::-webkit-scrollbar-thumb { background: rgba(61, 85, 201, .3); }
+        html:not(.dark) .sns-side-foot {
+            background: rgba(255, 255, 255, .72);
+            border-color: rgba(61, 85, 201, .2);
+            color: #5d6c99;
+        }
+        html:not(.dark) .sns-side-foot b { color: #16255c; }
+
+        /* ═══ 4. HEADER & TOOLBAR: putih tegas, garis biru-abu jelas ═══ */
+        html:not(.dark) header.h-14 {
+            box-shadow: 0 1px 0 #c9d5f2, 0 14px 30px -22px rgba(50, 90, 160, .55) !important;
+        }
+        html:not(.dark) header.h-14:not([class*="bg-brand-"]):not([class*="bg-emerald-"]) { background-color: var(--sns-header-bg) !important; }
+        html:not(.dark) header.h-14 button:not([class*="bg-brand-"]):not([class*="bg-emerald-"]):hover {
+            background-color: rgba(61, 85, 201, .1);
+            box-shadow: 0 0 0 1px rgba(61, 85, 201, .28), 0 10px 20px -12px rgba(61, 85, 201, .6);
+        }
+        html:not(.dark) #searchInput { border-width: 2px !important; }
+
+        /* ═══ 5. KOLOM: biru pucat solid, kontras terhadap latar & kartu ═══ */
+        html:not(.dark) main .grid > div[class*="rounded-2xl"] {
+            --col-accent: #5f7fd8;
+            box-shadow: 0 12px 28px -16px rgba(40, 80, 170, .55), 0 1px 3px rgba(40, 80, 170, .16) !important;
+        }
+        html:not(.dark) main .grid > div[class*="rounded-2xl"]:hover {
+            box-shadow: 0 16px 34px -18px rgba(50, 90, 160, .55), 0 1px 3px rgba(50, 90, 160, .14) !important;
+        }
+        html:not(.dark) div:has(> div > #col-todo) span.w-2\.5 { background-color: #5f7fd8 !important; }
+        html:not(.dark) #col-done .kanban-task-card { opacity: .94; }
+
+        /* ═══ 6. MODAL ═══ */
+        html:not(.dark) [class*="bg-white"][class*="rounded-2xl"][class*="shadow-2xl"] {
+            box-shadow: 0 30px 70px rgba(50, 90, 160, .35), 0 2px 8px rgba(50, 90, 160, .12) !important;
+        }
+
+        /* ═══ 7. TEKS, GARIS & PERMUKAAN UTILITY (slate → palet navy login) ═══ */
+        html:not(.dark) .text-slate-400 { color: #7886b3; }
+        html:not(.dark) .text-slate-500 { color: #5d6c99; }
+        html:not(.dark) .text-slate-600 { color: #3a4a7a; }
+        html:not(.dark) .text-slate-700 { color: #1f3277; }
+        html:not(.dark) .text-slate-800,
+        html:not(.dark) .text-slate-900 { color: #16255c; }
+        html:not(.dark) .text-brand-600,
+        html:not(.dark) .text-brand-700 { color: #3d55c9; }
+
+        html:not(.dark) .bg-slate-50 { background-color: #eef4ff; }
+        html:not(.dark) .bg-slate-100,
+        html:not(.dark) .hover\:bg-slate-100:hover { background-color: #e1eafc; }
+        html:not(.dark) .hover\:bg-slate-50:hover { background-color: #e9f0ff; }
+        html:not(.dark) .bg-brand-50 { background-color: #e6ecff; }
+
+        html:not(.dark) [class*="border-slate-100"]:not([class*="border-l-"]) { border-color: #dbe5fa; }
+        html:not(.dark) [class*="border-slate-200"]:not([class*="border-l-"]) { border-color: #c9d5f2; }
+        html:not(.dark) [class*="border-slate-300"]:not([class*="border-l-"]) { border-color: #b4c3ea; }
+
+        /* tombol utama = aksen login */
+        html:not(.dark) :is(header, main) button.bg-brand-600 { background-color: #3d55c9; }
+        html:not(.dark) :is(header, main) button.bg-brand-600:hover { background-color: #2f44ad; }
+
+        /* ═══ 8. FORM: gaya field login ═══ */
+        html:not(.dark) :is(input, select, textarea):not([type="checkbox"]):not([type="radio"]):not([type="range"]) {
+            background-color: #f1f5ff;
+            border-color: #c9d5f2;
+            color: #16255c;
+        }
+        html:not(.dark) :is(input, select, textarea)::placeholder { color: #8795c0; }
+        html:not(.dark) :is(input, select, textarea):not([type="checkbox"]):not([type="radio"]):hover { border-color: #aebcea; }
+        html:not(.dark) :is(input, select, textarea):not([type="checkbox"]):not([type="radio"]):focus {
+            background-color: #fff;
+            border-color: #3d55c9;
+            box-shadow: 0 0 0 4px rgba(61, 85, 201, .16);
+        }
+        html:not(.dark) :focus-visible { outline-color: #3d55c9 !important; }
+
+        html:not(.dark) .kanban-column::-webkit-scrollbar-thumb,
+        html:not(.dark) .kanban-scroll::-webkit-scrollbar-thumb { background-color: rgba(61, 85, 201, .28); }
+    </style>
+
+    {{-- ================================================================
+         SNS TOOLBAR — susunan filter dikunci (grid) supaya tidak geser saat
+         ganti filter Semua / Maint-Support / Development. Berlaku di light & dark
+         (hanya tata letak, tanpa warna). Hapus blok ini untuk kembali ke awal.
+    ================================================================= --}}
+    <style id="sns-toolbar">
+        /* ═══ TOOLBAR 2 BARIS (layar ≥1280px) — posisi dikunci, tidak geser antar mode ═══
+           Baris 1: pencarian | waktu + urutan ........ kategori | Rekap Excel (ATL)
+           Baris 2: Level ............................ Create Task | avatar | My Tasks
+           Progres + Critical dipindah ke header (di sebelah judul board).            */
+        @media (min-width: 1280px) {
+            div:has(> div > #searchInput) {
+                flex-wrap: nowrap;
+                justify-content: flex-start;
+                align-items: center;
+                gap: .75rem;
+            }
+            div:has(> #searchInput)    { flex: 0 1 256px; min-width: 150px; }
+            div:has(> #btnSortOrder)   { flex: none; flex-wrap: nowrap; }
+            div:has(> .cat-filter-btn) { flex: none; margin-left: auto; }
+            #btnExportExcel            { flex: none; }
+
+            div:has(> #priorityFilterContainer) {
+                flex-wrap: nowrap;
+                justify-content: flex-start;
+                align-items: center;
+                gap: .75rem;
+            }
+            #priorityFilterContainer { flex: none; }
+            div:has(> #avatarFilterGroup) { flex: none; margin-left: auto; }
+        }
+
+        /* Progres di header */
+        header.h-14 #boardProgressSummary { flex: none; margin-left: .25rem; }
+
+        /* ── Avatar PIC: tidak bertumpuk, inisial terbaca penuh ── */
+        #avatarFilterGroup { gap: 5px; flex-wrap: wrap; }
+        #avatarFilterGroup > * { margin-left: 0 !important; }
+    </style>
+    <style id="sns-light-tune">
+        /* ═══ TUNING LIGHT: teks lebih solid, latar & permukaan sedikit diredam ═══
+           Hanya mode light (html:not(.dark)). Hapus blok ini untuk kembali ke versi sebelumnya. */
+        html:not(.dark) {
+            --sns-main-bg: #d3e3fa;
+            --sns-header-bg: rgba(244, 248, 255, .95);
+            --sns-toolbar-bg: rgba(238, 244, 254, .9);
+            --sns-card-bg: #fafcff;
+            --sns-modal-bg: #f8faff;
+            --sns-input-bg: #eaf1fe;
+            --sns-col-title: #16255c;
+            --sns-sidebar-text: #2c3c72;
+        }
+        html:not(.dark) body {
+            background-image: linear-gradient(135deg, #d0e2fa 0%, #e2edfc 45%, #c8def8 100%);
+        }
+
+        /* teks: lebih pekat + sedikit lebih tebal */
+        html:not(.dark) .text-slate-400 { color: #5b6b9e; }
+        html:not(.dark) .text-slate-500 { color: #46568a; }
+        html:not(.dark) .text-slate-600 { color: #2c3c72; }
+        html:not(.dark) .text-slate-700 { color: #182869; }
+        html:not(.dark) .text-slate-800,
+        html:not(.dark) .text-slate-900 { color: #0e1a4a; }
+        html:not(.dark) .font-normal  { font-weight: 500; }
+        html:not(.dark) .font-medium  { font-weight: 600; }
+        html:not(.dark) :is(input, select, textarea)::placeholder { color: #6e7da8; }
+        html:not(.dark) :is(input, select, textarea):not([type="checkbox"]):not([type="radio"]):not([type="range"]) {
+            background-color: #eaf1fe;
+            color: #0e1a4a;
+        }
+        html:not(.dark) :is(input, select, textarea):not([type="checkbox"]):not([type="radio"]):focus { background-color: #f7faff; }
+        html:not(.dark) #appSidebar .block.text-\[10px\],
+        html:not(.dark) #appSidebar [class*="text-\[10px\]"][class*="uppercase"] { color: #3a4a7a !important; }
+        html:not(.dark) .sns-side-foot { color: #46568a; }
+    </style>
+
+    <style id="sns-um-light">
+        /* ═══ MANAJEMEN USER — form mode light (gaya login). Mode gelap tidak tersentuh. ═══ */
+        html:not(.dark) dialog.user-management-modal {
+            background: #f8faff !important;
+            color: #16255c !important;
+            border: 1px solid #b4c3ea !important;
+            border-radius: 20px !important;
+            box-shadow: 0 30px 70px rgba(50, 90, 160, .35), 0 2px 8px rgba(50, 90, 160, .12) !important;
+            padding: 0 !important;
+            overflow: hidden;
+        }
+        html:not(.dark) dialog.user-management-modal::backdrop { background: rgba(22, 37, 92, .5); }
+
+        /* header */
+        html:not(.dark) dialog.user-management-modal > header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 16px 20px;
+            background: linear-gradient(160deg, #d6e9ff 0%, #c9e2ff 55%, #c0ecff 100%);
+            border-bottom: 1px solid #b4c3ea;
+        }
+        html:not(.dark) dialog.user-management-modal > header h2 { margin: 0; font-size: 17px; font-weight: 800; color: #16255c; }
+        html:not(.dark) dialog.user-management-modal > header small { color: #3a4a7a; font-weight: 600; }
+        html:not(.dark) dialog.user-management-modal [data-user-close] {
+            width: 32px; height: 32px;
+            border-radius: 10px;
+            border: 1px solid rgba(61, 85, 201, .28);
+            background: rgba(255, 255, 255, .75);
+            color: #1f3277;
+            font-size: 20px; line-height: 1;
+            cursor: pointer;
+            transition: background .15s, border-color .15s;
+        }
+        html:not(.dark) dialog.user-management-modal [data-user-close]:hover { background: #fff; border-color: #3d55c9; }
+
+        html:not(.dark) dialog.user-management-modal .user-management-body { padding: 18px 20px; }
+
+        /* daftar user */
+        html:not(.dark) dialog.user-management-modal #userManagementList {
+            max-height: 240px;
+            overflow: auto;
+            padding: 6px;
+            border: 1px solid #c9d5f2;
+            border-radius: 14px;
+            background: #fff;
+        }
+        html:not(.dark) dialog.user-management-modal #userManagementList > * {
+            padding: 10px 12px;
+            border: 1px solid #dbe5fa;
+            border-radius: 10px;
+            background: #f1f6ff;
+            color: #16255c;
+            transition: background .15s, border-color .15s;
+        }
+        html:not(.dark) dialog.user-management-modal #userManagementList > * + * { margin-top: 6px; }
+        html:not(.dark) dialog.user-management-modal #userManagementList > *:hover { background: #e6eeff; border-color: #b4c3ea; }
+        html:not(.dark) dialog.user-management-modal #userManagementList > :is(.active, .selected, [aria-current], [aria-selected="true"]) {
+            background: #e0e8ff; border-color: #3d55c9;
+        }
+        html:not(.dark) dialog.user-management-modal #userManagementList :is(strong, b) { color: #16255c; font-weight: 800; }
+        html:not(.dark) dialog.user-management-modal #userManagementList :is(small, span, p) { color: #3a4a7a; }
+        html:not(.dark) dialog.user-management-modal #userManagementList button {
+            padding: 4px 10px;
+            border: 1px solid #b4c3ea;
+            border-radius: 8px;
+            background: #fff;
+            color: #1f3277;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        html:not(.dark) dialog.user-management-modal #userManagementList button:hover { border-color: #3d55c9; background: #f1f5ff; }
+        html:not(.dark) dialog.user-management-modal #userManagementList button:is([class*="delete"], [class*="danger"], [class*="remove"], [data-user-delete]) {
+            color: #be123c; border-color: #fecdd3; background: #fff1f2;
+        }
+
+        /* form */
+        html:not(.dark) dialog.user-management-modal .user-management-form { display: grid; gap: 12px; margin-top: 16px; }
+        html:not(.dark) dialog.user-management-modal .user-management-form label {
+            display: grid;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: .02em;
+            color: #2c3c72;
+        }
+        html:not(.dark) dialog.user-management-modal .user-management-form :is(input, select):not([type="radio"]):not([type="checkbox"]) {
+            width: 100%;
+            box-sizing: border-box;
+            height: 42px;
+            padding: 0 12px;
+            border: 2px solid #c9d5f2;
+            border-radius: 12px;
+            background-color: #eaf1fe;
+            color: #0e1a4a;
+            font: 600 14px/1 inherit;
+            outline: none;
+            transition: border-color .15s, box-shadow .15s, background-color .15s;
+        }
+        html:not(.dark) dialog.user-management-modal .user-management-form :is(input, select):not([type="radio"]):not([type="checkbox"]):hover { border-color: #aebcea; }
+        html:not(.dark) dialog.user-management-modal .user-management-form :is(input, select):not([type="radio"]):not([type="checkbox"]):focus {
+            background-color: #f7faff;
+            border-color: #3d55c9;
+            box-shadow: 0 0 0 4px rgba(61, 85, 201, .16);
+        }
+        html:not(.dark) dialog.user-management-modal .user-management-form input::placeholder { color: #6e7da8; font-weight: 500; }
+
+        /* penempatan staff */
+        html:not(.dark) dialog.user-management-modal .user-assignment-field {
+            margin: 0;
+            min-width: 0;
+            padding: 12px 14px;
+            border: 1px solid #c9d5f2;
+            border-radius: 14px;
+            background: #eef4ff;
+        }
+        html:not(.dark) dialog.user-management-modal .user-assignment-field legend {
+            padding: 0 8px;
+            font-size: 12px;
+            font-weight: 800;
+            color: #2f44ad;
+        }
+        html:not(.dark) dialog.user-management-modal .user-management-form label.user-radio {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 6px;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0;
+            color: #2c3c72;
+            cursor: pointer;
+        }
+        html:not(.dark) dialog.user-management-modal :is(input[type="radio"], input[type="checkbox"]) {
+            width: 16px; height: 16px; accent-color: #3d55c9;
+        }
+        html:not(.dark) dialog.user-management-modal .tl-checkbox-list:not(:empty) {
+            margin-top: 8px;
+            max-height: 150px;
+            overflow: auto;
+            padding: 8px 10px;
+            border: 1px dashed #b4c3ea;
+            border-radius: 12px;
+            background: #f7faff;
+        }
+        html:not(.dark) dialog.user-management-modal .tl-checkbox-list label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 0;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0;
+            color: #1f3277;
+            cursor: pointer;
+        }
+
+        /* error */
+        html:not(.dark) dialog.user-management-modal .user-form-error:not(:empty) {
+            padding: 8px 12px;
+            border: 1px solid #fecdd3;
+            border-radius: 10px;
+            background: #fff1f2;
+            color: #be123c;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        /* tombol bawah */
+        html:not(.dark) dialog.user-management-modal .user-management-form footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding-top: 6px;
+        }
+        html:not(.dark) dialog.user-management-modal .user-management-form footer button {
+            padding: 10px 18px;
+            border: 1px solid #b4c3ea;
+            border-radius: 12px;
+            background: #fff;
+            color: #1f3277;
+            font-weight: 700;
+            cursor: pointer;
+            transition: border-color .15s, background .15s, transform .12s;
+        }
+        html:not(.dark) dialog.user-management-modal .user-management-form footer button:hover { border-color: #3d55c9; background: #f1f5ff; }
+        html:not(.dark) dialog.user-management-modal .user-management-form footer button:active { transform: translateY(1px); }
+        html:not(.dark) dialog.user-management-modal .user-management-form footer .user-save-button {
+            border: 0;
+            background: linear-gradient(180deg, #4a63d6, #3d55c9);
+            color: #fff;
+            box-shadow: 0 8px 18px -8px rgba(61, 85, 201, .75), inset 0 1px 0 rgba(255, 255, 255, .22);
+        }
+        html:not(.dark) dialog.user-management-modal .user-management-form footer .user-save-button:hover { background: #2f44ad; }
+    </style>
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans antialiased selection:bg-brand-500 selection:text-white">
     {!! $workspace !!}
@@ -987,6 +1446,27 @@
         <header><h2 id="boardConfirmTitle"></h2><button type="button" data-modal-close aria-label="Tutup">×</button></header>
         <div class="confirm-body"><p>Anda akan menghapus <strong data-confirm-name></strong>.</p><p class="confirm-impact" data-confirm-impact></p></div>
         <div class="confirm-actions"><button type="button" data-modal-cancel>Batal</button><button type="button" class="danger" data-modal-confirm>Hapus</button></div>
+    </dialog>
+    <dialog id="userManagementModal" class="board-modal user-management-modal" aria-labelledby="userManagementTitle">
+        <header><div><h2 id="userManagementTitle">Manajemen User</h2><small>Kelola TL dan Staff</small></div><button type="button" data-user-close aria-label="Tutup">×</button></header>
+        <div class="user-management-body">
+            <div id="userManagementList" class="user-management-list"></div>
+            <form id="userManagementForm" class="user-management-form">
+                <input type="hidden" id="managedUserId">
+                <label>Nama<input id="managedUserName" required maxlength="255"></label>
+                <label>NIP<input id="managedUserNip" type="text" required inputmode="numeric" pattern="[0-9]{10}" maxlength="10" autocomplete="off"></label>
+                <label>Role<select id="managedUserRole"><option value="tl">Team Leader</option><option value="it_staff">Staff</option></select></label>
+                <label>Password<input id="managedUserPassword" type="password" minlength="8" placeholder="Minimal 8 karakter"></label>
+                <fieldset id="managedAssignmentField" class="user-assignment-field">
+                    <legend>Penempatan Staff</legend>
+                    <label class="user-radio"><input type="radio" name="managedAssignment" value="atl" checked> Langsung ke ATL</label>
+                    <label class="user-radio"><input type="radio" name="managedAssignment" value="tl"> Di bawah Team Lead</label>
+                    <div id="managedTlField" class="tl-checkbox-list"></div>
+                </fieldset>
+                <div class="user-form-error field-error" id="userManagementError"></div>
+                <footer><button type="button" data-user-cancel>Batal</button><button type="submit" class="primary user-save-button">Simpan User</button></footer>
+            </form>
+        </div>
     </dialog>
     <form id="laravel-logout" method="post" action="{{ route('logout') }}" hidden>@csrf</form>
     <script>
@@ -1194,6 +1674,26 @@
         }
         if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mountFooter);
         else mountFooter();
+    })();
+    </script>
+    <script>
+    /* SNS MOVE — Rekap Excel → baris 1 toolbar; Progres/Critical → header (sebelah judul board).
+       Elemen sama (id tetap), jadi logika role & render JS prototype tidak berubah.
+       Badge role tetap di header. */
+    (function snsMoveToToolbar() {
+        function move() {
+            const rekap    = document.getElementById('btnExportExcel');
+            const progress = document.getElementById('boardProgressSummary');
+            const row1     = document.getElementById('searchInput')?.parentElement?.parentElement;
+            const headLeft = document.getElementById('activeScopeTitle')?.closest('header')?.firstElementChild;
+            if (!rekap || !progress || !row1 || !headLeft) return false;
+            if (rekap.dataset.snsMoved) return true;
+            row1.appendChild(rekap);
+            headLeft.appendChild(progress);
+            rekap.dataset.snsMoved = '1';
+            return true;
+        }
+        if (!move()) document.addEventListener('DOMContentLoaded', move);
     })();
     </script>
 </body>

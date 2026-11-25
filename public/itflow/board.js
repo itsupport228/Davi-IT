@@ -6,7 +6,7 @@ let modalRestoreFocus = null;
 let modalAction = null;
 let modalCloseTimer = null;
 
-function boardModal({title, name, impact, onConfirm}) {
+function boardModal({title, confirmLabel = 'Hapus', name, impact, onConfirm}) {
     const dialog = document.getElementById('boardConfirmDialog');
     if (!dialog) throw new Error('Modal konfirmasi tidak tersedia.');
     if (modalCloseTimer) { clearTimeout(modalCloseTimer); modalCloseTimer = null; }
@@ -15,7 +15,7 @@ function boardModal({title, name, impact, onConfirm}) {
     dialog.querySelector('[data-confirm-name]').textContent = name;
     dialog.querySelector('[data-confirm-impact]').textContent = impact;
     const confirm = dialog.querySelector('[data-modal-confirm]');
-    confirm.disabled = false; confirm.classList.remove('is-busy'); confirm.textContent = 'Hapus';
+    confirm.disabled = false; confirm.classList.remove('is-busy'); confirm.textContent = confirmLabel;
     modalAction = onConfirm; modalRestoreFocus = document.activeElement; activeBoardModal = dialog;
     dialog.classList.remove('is-closing'); dialog.showModal();
     requestAnimationFrame(() => dialog.classList.add('is-open'));
@@ -38,12 +38,81 @@ document.addEventListener('DOMContentLoaded', () => {
         const confirm = event.currentTarget;
         if (confirm.disabled || !modalAction) return;
         const action = modalAction; confirm.disabled = true; confirm.classList.add('is-busy'); confirm.textContent = 'Memproses...'; modalAction = null;
-        try { await action(); closeBoardModal(); } catch (error) { modalAction = action; confirm.disabled = false; confirm.classList.remove('is-busy'); confirm.textContent = 'Hapus'; showToast(error.message, 'error'); }
+        try { await action(); closeBoardModal(); } catch (error) { modalAction = action; confirm.disabled = false; confirm.classList.remove('is-busy'); showToast(error.message, 'error'); }
     });
+    const userDialog = document.getElementById('userManagementModal');
+    if (currentRole === 'atl' && userDialog) {
+        const button = document.createElement('button');
+        button.type = 'button'; button.className = 'user-management-trigger'; button.textContent = 'Manajemen User';
+        button.addEventListener('click', openUserManagement);
+        document.querySelector('header.h-14 .flex.items-center.gap-2:last-child')?.prepend(button);
+        userDialog.querySelectorAll('[data-user-close], [data-user-cancel]').forEach(item => item.addEventListener('click', closeUserManagement));
+        userDialog.addEventListener('cancel', event => { event.preventDefault(); closeUserManagement(); });
+        document.getElementById('userManagementForm').addEventListener('submit', saveManagedUser);
+        document.getElementById('managedUserRole').addEventListener('change', toggleTlField);
+        document.getElementById('userManagementForm').addEventListener('input', filterManagedNip);
+        document.getElementById('userManagementForm').addEventListener('paste', filterManagedNip);
+        document.getElementById('managedUserNip').addEventListener('keydown', event => {
+            if (event.key.length === 1 && !/[0-9]/.test(event.key) && !event.ctrlKey && !event.metaKey) event.preventDefault();
+        });
+        userDialog.querySelectorAll('input[name="managedAssignment"]').forEach(input => input.addEventListener('change', toggleTlField));
+    }
 });
 
-function confirmBoardDelete({type, name, impact, onConfirm}) {
-    return boardModal({title: `Hapus ${type}?`, name, impact, onConfirm});
+let managedUsers = [], managedTls = [];
+async function openUserManagement() {
+    const dialog = document.getElementById('userManagementModal');
+    if (!dialog || currentRole !== 'atl') return;
+    const list = document.getElementById('userManagementList');
+    const error = document.getElementById('userManagementError');
+    if (! dialog.open) {
+        dialog.classList.remove('is-closing');
+        dialog.showModal();
+        requestAnimationFrame(() => dialog.classList.add('is-open'));
+    }
+    list.textContent = 'Memuat daftar user...';
+    error.textContent = '';
+    try {
+        const data = await boardRequest('/users');
+        managedUsers = data.users; managedTls = data.tls;
+        renderManagedUsers(); resetManagedUserForm();
+    } catch (requestError) {
+        list.textContent = 'Daftar user tidak dapat dimuat.';
+        error.textContent = requestError.message || 'Terjadi kesalahan saat memuat user.';
+    }
+}
+function closeUserManagement() {
+    const dialog = document.getElementById('userManagementModal');
+    if (! dialog?.open) return;
+    dialog.classList.remove('is-open'); dialog.classList.add('is-closing');
+    setTimeout(() => { if (dialog.open) dialog.close(); dialog.classList.remove('is-closing'); }, 160);
+}
+function renderManagedUsers() {
+    document.getElementById('userManagementList').innerHTML = managedUsers.map(user => `<div class="managed-user-row" data-user-id="${user.id}"><button type="button" class="managed-user-select"><strong>${user.name}</strong><span>${user.nip} · ${user.role === 'tl' ? 'TL' : 'Staff'} · ${user.is_active ? 'Aktif' : 'Nonaktif'}</span></button>${user.role !== 'atl' ? `<button type="button" class="managed-user-delete" aria-label="Hapus ${user.name}">Hapus</button>` : '<small class="protected-user">ATL dilindungi</small>'}</div>`).join('');
+    document.querySelectorAll('.managed-user-row').forEach(row => {
+        const user = managedUsers.find(item => String(item.id) === row.dataset.userId);
+        row.querySelector('.managed-user-select').addEventListener('click', () => fillManagedUser(user));
+        row.querySelector('.managed-user-delete')?.addEventListener('click', () => {
+            const historical = Boolean(user.has_history);
+            confirmBoardDelete({title: historical ? 'Nonaktifkan Akun?' : 'Hapus Permanen?', confirmLabel: historical ? 'Nonaktifkan Akun' : 'Hapus Permanen', type: 'user', name: `${user.name} (${user.nip})`, impact: historical ? 'Akun akan dinonaktifkan agar riwayat task dan komentar tetap terjaga. User tidak dapat login.' : 'Akun belum memiliki task atau komentar dan akan dihapus permanen.', onConfirm: async () => { const result = await boardRequest(`/users/${user.id}`, 'DELETE'); showToast(result.deactivated ? 'Akun berhasil dinonaktifkan.' : 'User berhasil dihapus.', 'success'); await openUserManagement(); }});
+        });
+    });
+}
+function resetManagedUserForm() { document.getElementById('userManagementForm').reset(); document.getElementById('managedUserId').value = ''; document.getElementById('userManagementError').textContent = ''; renderTlOptions([]); toggleTlField(); }
+function fillManagedUser(user) { document.getElementById('managedUserId').value = user.id; document.getElementById('managedUserName').value = user.name; document.getElementById('managedUserNip').value = user.nip; document.getElementById('managedUserRole').value = user.role; document.getElementById('managedUserPassword').value = ''; document.querySelector(`input[name="managedAssignment"][value="${user.tl_ids?.length ? 'tl' : 'atl'}"]`).checked = true; renderTlOptions(user.tl_ids || []); toggleTlField(); }
+function renderTlOptions(selected = []) { document.getElementById('managedTlField').innerHTML = managedTls.map(tl => `<label class="tl-checkbox"><input type="checkbox" name="managedTlIds" value="${tl.id}" ${selected.map(String).includes(String(tl.id)) ? 'checked' : ''}> <span>${tl.name}</span><small>${tl.nip}</small></label>`).join(''); }
+function toggleTlField() { const isStaff = document.getElementById('managedUserRole').value === 'it_staff'; const assignment = document.querySelector('input[name="managedAssignment"]:checked')?.value; document.getElementById('managedAssignmentField').style.display = isStaff ? 'grid' : 'none'; document.getElementById('managedTlField').style.display = isStaff && assignment === 'tl' ? 'grid' : 'none'; }
+function filterManagedNip(event) { if (event.target.id !== 'managedUserNip') return; event.target.value = event.target.value.replace(/\D/g, '').slice(0, 10); }
+async function saveManagedUser(event) {
+    event.preventDefault(); const form = event.currentTarget; setFormBusy(form, true); const error = document.getElementById('userManagementError'); error.textContent = '';
+    const id = document.getElementById('managedUserId').value; const role = document.getElementById('managedUserRole').value; const assignment = document.querySelector('input[name="managedAssignment"]:checked')?.value || 'atl'; const payload = {name: document.getElementById('managedUserName').value.trim(), nip: document.getElementById('managedUserNip').value.trim(), role, password: document.getElementById('managedUserPassword').value, assignment_mode: assignment, tl_ids: [...document.querySelectorAll('input[name="managedTlIds"]:checked')].map(input => Number(input.value))};
+    if (!/^\d{10}$/.test(payload.nip)) { error.textContent = 'NIP harus tepat 10 digit angka.'; setFormBusy(form, false); return; }
+    if (!id && !payload.password) { error.textContent = 'Password wajib diisi untuk user baru.'; setFormBusy(form, false); return; }
+    try { await boardRequest(id ? `/users/${id}` : '/users', id ? 'PATCH' : 'POST', payload); showToast('User berhasil disimpan.', 'success'); await openUserManagement(); } catch (requestError) { error.textContent = requestError.message; } finally { setFormBusy(form, false); }
+}
+
+function confirmBoardDelete({title, confirmLabel, type, name, impact, onConfirm}) {
+    return boardModal({title: title || `Hapus ${type}?`, confirmLabel, name, impact, onConfirm});
 }
 
 function setFormBusy(form, busy) { form?.querySelectorAll('button, input, textarea, select').forEach(el => { el.disabled = busy; el.classList.toggle('is-busy', busy); }); }

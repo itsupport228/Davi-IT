@@ -14,8 +14,50 @@ class ItFlowBoardTest extends TestCase
     private function user(string $role, string $nip): User
     {
         $id = DB::table('users')->insertGetId(['nip' => $nip, 'name' => $role, 'role' => $role,
-            'password' => bcrypt('unused'), 'created_at' => now(), 'updated_at' => now()]);
+            'password' => bcrypt('unused'), 'is_active' => true, 'created_at' => now(), 'updated_at' => now()]);
         return User::findOrFail($id);
+    }
+
+    public function test_only_atl_can_manage_users_and_history_blocks_permanent_delete(): void
+    {
+        $atl = $this->user('atl', '0000000101');
+        $tl = $this->user('tl', '0000000102');
+        $staff = $this->user('it_staff', '0000000103');
+
+        $this->actingAs($tl)->getJson('/board/api/users')->assertForbidden();
+        $created = $this->actingAs($atl)->postJson('/board/api/users', [
+            'name' => 'New Staff', 'nip' => '0000000104', 'role' => 'it_staff', 'password' => 'password123', 'assignment_mode' => 'tl', 'tl_ids' => [$tl->id],
+        ])->assertCreated()->json();
+        $this->assertDatabaseHas('tl_staff', ['tl_id' => $tl->id, 'staff_id' => $created['id']]);
+
+        $project = $this->actingAs($atl)->postJson('/board/api/projects', ['name' => 'History', 'prefix' => 'HIS'])->json();
+        $task = $this->postJson('/board/api/tasks', ['project_id' => $project['id'], 'sub_project_id' => null, 'title' => 'Historical', 'status' => 'todo', 'category' => 'maintenance', 'priority' => 'high', 'assignee_id' => $created['id']])->json();
+        $this->actingAs($atl)->deleteJson('/board/api/users/'.$created['id'])->assertJsonPath('deactivated', true);
+        $this->assertDatabaseHas('users', ['id' => $created['id'], 'is_active' => false]);
+
+        DB::table('users')->where('id', $created['id'])->update(['is_active' => false]);
+        auth()->logout();
+        $this->post('/login', ['nip' => '0000000104', 'password' => 'password123'])->assertSessionHasErrors('nip');
+        $this->actingAs($atl)->getJson('/board/api/meta')->assertJsonMissing(['name' => 'New Staff']);
+        $this->assertDatabaseHas('tasks', ['id' => $task['id'], 'assignee_id' => $created['id']]);
+        DB::table('tasks')->where('id', $task['id'])->delete();
+    }
+
+    public function test_staff_assignment_modes_and_leading_zero_nip_are_validated(): void
+    {
+        $atl = $this->user('atl', '0000000111');
+        $tlOne = $this->user('tl', '0000000112');
+        $tlTwo = $this->user('tl', '0000000113');
+
+        $direct = $this->actingAs($atl)->postJson('/board/api/users', ['name' => 'Direct Staff', 'nip' => '0012345678', 'role' => 'it_staff', 'password' => 'password123', 'assignment_mode' => 'atl', 'tl_ids' => []])->assertCreated()->json();
+        $this->assertSame('0012345678', $direct['nip']);
+        $this->assertDatabaseMissing('tl_staff', ['staff_id' => $direct['id']]);
+
+        $multi = $this->postJson('/board/api/users', ['name' => 'Multi Staff', 'nip' => '0012345679', 'role' => 'it_staff', 'password' => 'password123', 'assignment_mode' => 'tl', 'tl_ids' => [$tlOne->id, $tlTwo->id]])->assertCreated()->json();
+        $this->assertDatabaseCount('tl_staff', 2);
+        $this->patchJson('/board/api/users/'.$multi['id'], ['name' => 'Multi Staff', 'nip' => '0012345679', 'role' => 'it_staff', 'password' => '', 'assignment_mode' => 'atl', 'tl_ids' => []])->assertOk();
+        $this->assertDatabaseMissing('tl_staff', ['staff_id' => $multi['id']]);
+        $this->postJson('/board/api/users', ['name' => 'Invalid NIP', 'nip' => '123', 'role' => 'it_staff', 'password' => 'password123', 'assignment_mode' => 'atl'])->assertStatus(422);
     }
 
     public function test_project_task_detail_and_role_access_persist(): void

@@ -255,7 +255,7 @@
 
         .row-opts {
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             justify-content: space-between;
             gap: 1rem;
             margin: .2rem 0 1.3rem;
@@ -263,7 +263,9 @@
             color: var(--text);
         }
 
+        .remember-group { display: flex; flex-direction: column; gap: .6rem; }
         .remember { display: flex; align-items: center; gap: .55rem; }
+        
         .remember input {
             width: 20px;
             height: 20px;
@@ -280,6 +282,7 @@
             display: inline-flex;
             align-items: center;
             gap: .35rem;
+            margin-top: .1rem;
             color: var(--muted);
             font-weight: 700;
             font-variant-numeric: tabular-nums;
@@ -508,9 +511,11 @@
             </div>
 
             <div class="row-opts">
-                <div class="remember">
-                    <input type="checkbox" id="rememberMe" class="form-check-input">
-                    <label for="rememberMe">Ingat NIP saya</label>
+                <div class="remember-group">
+                    <div class="remember">
+                        <input type="checkbox" id="rememberMe" class="form-check-input">
+                        <label for="rememberMe">Ingat NIP &amp; password saya</label>
+                    </div>
                 </div>
                 <span class="clock"><i class="bi bi-clock"></i><span id="clock">WIB</span></span>
             </div>
@@ -534,6 +539,8 @@
 (function () {
     const KEY_NIP = 'itflow_saved_nip';
     const KEY_REM = 'itflow_remember';
+    const KEY_PASS = 'itflow_saved_pass';
+    const LOGIN_FAILED = @json($errors->any());   // login sebelumnya gagal → jangan isi ulang password lama
 
     const form      = document.getElementById('loginForm');
     const nipInput  = document.getElementById('nip');
@@ -550,16 +557,26 @@
     setInterval(tick, 15000);
 
     // --- Isi ulang NIP yang tersimpan ---
-    let savedNip = null, isRemembered = false;
+    let savedNip = null, savedPass = null, isRemembered = false;
     try {
         savedNip = localStorage.getItem(KEY_NIP);
+        savedPass = localStorage.getItem(KEY_PASS);
         isRemembered = localStorage.getItem(KEY_REM) === '1';
+        if (LOGIN_FAILED && savedPass) {          // password tersimpan ternyata salah → buang
+            localStorage.removeItem(KEY_PASS);
+            savedPass = null;
+        }
     } catch (e) { /* storage diblokir, lanjut tanpa fitur ingat */ }
 
     if (isRemembered && savedNip) {
         if (!nipInput.value) nipInput.value = savedNip;
         remBox.checked = true;
-        passInput.focus();
+        if (savedPass) {
+            passInput.value = savedPass;
+            document.getElementById('btnLogin').focus();   // tinggal tekan Enter
+        } else {
+            passInput.focus();
+        }
     }
 
     // --- Tampil / sembunyikan password ---
@@ -585,7 +602,7 @@
     passInput.addEventListener('keyup', checkCaps);
     passInput.addEventListener('blur', function () { capsHint.classList.remove('show'); });
 
-    // --- Simpan / hapus NIP + status loading saat submit ---
+    // --- Simpan / hapus NIP & password + status loading saat submit ---
     form.addEventListener('submit', function () {
         try {
             if (remBox.checked) {
@@ -594,6 +611,11 @@
             } else {
                 localStorage.removeItem(KEY_NIP);
                 localStorage.removeItem(KEY_REM);
+            }
+            if (remBox.checked && passInput.value) {
+                localStorage.setItem(KEY_PASS, passInput.value);
+            } else {
+                localStorage.removeItem(KEY_PASS);
             }
         } catch (e) {}
 
@@ -611,6 +633,7 @@
             try {
                 localStorage.removeItem(KEY_NIP);
                 localStorage.removeItem(KEY_REM);
+                localStorage.removeItem(KEY_PASS);
             } catch (e) {}
         }
     });

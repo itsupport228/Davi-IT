@@ -33,7 +33,7 @@ class Task extends Model
 
     public static function allowedAssignees(User $user): Builder
     {
-        $query = User::query();
+        $query = User::query()->where('is_active', true);
 
         return match ($user->role) {
             'atl' => $query,
